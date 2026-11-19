@@ -76,9 +76,10 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 ├── tests/                  Node tests of sim/ (node --test)
 │   ├── load.js             loads constants, data and sim files into a vm context (plain scripts)
 │   ├── smoke.test.js       the scripts load; the state and the difficulty table are there
-│   ├── model.test.js
-│   ├── metrics.test.js
-│   ├── contract.test.js
+│   ├── stream.test.js      the samplers, sub-streams, determinism, amounts, the gate
+│   ├── model.test.js       d', the posterior, AUC = Φ(d'/√2), Platt scaling, calibration keeps the ranking
+│   ├── metrics.test.js     every metric, empty denominators, ROC = Mann–Whitney, AP = scikit-learn, profit curve
+│   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
 │   ├── incidents.test.js
 │   └── topk.test.js
 ├── tools/
@@ -145,7 +146,8 @@ A new save format gets a new key suffix (`.v2`) and a migration from the old one
   - the cost-optimal threshold `p*` for the contracts' prices; the hindsight-best search finds the known optimum on a crafted stream and respects goals and the outbreak allowance;
   - a base rate shift leaves recall and FPR (in expectation) unchanged and moves precision as predicted; drift lowers the measured AUC; PSI > 0.2 after a 1.2 shift;
   - the review queue respects capacity; top-k metrics on a known query;
-  - determinism: the same seed gives the same stream.
+  - determinism: the same seed gives the same stream; a base rate change does not move the arrivals or the score noise;
+  - a threshold on calibrated `p` gives the same matrix as its equivalent raw threshold (ADR-0004).
 - **Balance:** `node tools/balance-check.js [--contract C05] [--difficulty hard]` plays each contract headless at t = 0.05, 0.10, …, 0.95 and at the hindsight-best, and prints money, goal met, stars; every contract must allow ★★★ on every level with the upgrades a normal campaign has by then (listed per contract in its output).
 - **Browser checks:** `node --experimental-websocket tools/cdp.js <steps.js> [out-dir]` (from `ivan`; steps files live in a temp folder, not in the repo): boot on a phone (portrait and landscape) and a desktop, start C01, drag the threshold, take screenshots, report page errors. Keep runs short.
 - **Translations** (from I07, when RU and SV are added): `node tools/i18n-check.js .` before every commit that touches texts; texts passed to `tr()` by variable (data tables) are checked by hand.

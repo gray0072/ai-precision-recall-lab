@@ -19,7 +19,7 @@ Status values: `todo`, `in progress`, `done`, `skipped`. **This table is the sin
 |---|---|---|---|---|---|
 | I00 | [Preparation: game design, spec, plan, conventions](iterations/I00-preparation.md) | — | 0 | 1 | done |
 | I01 | [Skeleton: page, tools, i18n, start screen, PWA](iterations/I01-skeleton.md) | I00 | 1 | 1 | done |
-| I02 | [Simulation core: scores, metrics, curves, tests](iterations/I02-simulation-core.md) | I00 | 1 | 1 | todo |
+| I02 | [Simulation core: scores, metrics, curves, tests](iterations/I02-simulation-core.md) | I00 | 1 | 1 | done |
 | I03 | [Play screen and sandbox](iterations/I03-play-screen-sandbox.md) | I01, I02 | 2 | 1–2 | todo |
 | I04 | [Campaign Act 1 and the cheat sheet](iterations/I04-campaign-act1.md) | I03 | 3 | 2 | todo |
 | I05 | [The Lab, incidents, review desk, Act 2](iterations/I05-lab-incidents-act2.md) | I04 | 4 | 2 | todo |

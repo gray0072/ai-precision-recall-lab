@@ -31,15 +31,15 @@ s = σ(γ · z + β)
 ### 2.2 Streams and the validation set
 
 - At the start of a contract the whole stream is generated in advance from a seeded PRNG (`mulberry32`, a new seed per attempt, shown in small print on the results screen): arrival times (Poisson with the contract's rate), `y` (Bernoulli `π`, following the base rate schedule of incidents), `z`, `s`, and for value-weighted scenarios the **amount** (§2.4). So the stream does not depend on what the player does, and the hindsight-best threshold (§5.2) is computed on the very same items. The one exception is adversarial items (§6.3), whose score is set when they spawn.
-- Separate PRNG streams are used for the item stream, the validation set and incidents, so that changing one (e.g. adding an incident) does not reshuffle the others.
+- Separate PRNG streams are used for the item stream, the validation set and incidents, so that changing one (e.g. adding an incident) does not reshuffle the others. Within the item stream, arrivals, classes, the score noise and the amounts have sub-streams of their own (`items.arrivals`, `items.classes`, `items.scores`, `items.amounts`), and an item's logit is its class mean plus its own standard normal draw: a base rate shift changes which items are positive but not when they arrive or how far each one sits from its class mean.
 - A **validation set** of `N_VAL` = 4 000 items is generated at the start with the contract's initial `π` and `d'`. It stands for the data the team evaluated the model on before going live; it is used for the model curves (§4), the calibration fit (§2.3) and the drift reference (§6.2).
 
 ### 2.3 Calibration (Platt scaling)
 
 With the Calibration upgrade, at the start of a contract the game fits **Platt scaling** on the validation set: `p = σ(a · logit(s) + b)`, with `a, b` found by maximum likelihood (Newton's method, at most 25 iterations, stop when the step is under 1e−9; scores are clamped to [0.01, 0.99] so `logit(s)` is finite).
 
-- In the binormal model the true posterior is exactly logistic in `z`: `logit P(y = 1 | z) = logit(π) + d' · z` (equal variances). Since `logit(s) = γz + β`, Platt scaling recovers `a = d' / γ` and `b = logit(π) − d' · β / γ` up to sampling noise and the rounding of `s`. A test checks this (05 §7).
-- Calibrated `p` is also rounded to 0.01 and clamped to [0.01, 0.99]. It is a monotone function of `s`, so **calibration changes no ranking, no curve and no AUC**: it changes what a number on the threshold means. The cheat sheet card G-calibration says so.
+- In the binormal model the true posterior is exactly logistic in `z`: `logit P(y = 1 | z) = logit(π) + d' · z` (equal variances). Since `logit(s) = γz + β`, Platt scaling recovers `a = d' / γ` and `b = logit(π) − d' · β / γ` up to sampling noise, the rounding of `s` and its clamping to [0.01, 0.99]. The clamping matters for overconfident models: Card Watch (`γ` 1.8, `β` +0.8) puts about 16 % of its frauds at 0.99, which biases the fitted `a` by 5–13 %; the fit is still calibrated (its reliability diagram sits on the diagonal). A test checks the recovery within 5 % on the scenarios whose scores rarely touch the clamps, and the reliability of all of them (05 §7).
+- Calibrated `p` is also rounded to 0.01 and clamped to [0.01, 0.99]. It is a monotone non-decreasing function of `s`, so **calibration changes no ranking, no curve and no AUC**: it changes what a number on the threshold means. The cheat sheet card G-calibration says so. Rounding can merge neighbouring raw scores into one `p` (on a steep part of the Platt map), so the curves are always computed on the raw score and a threshold on `p` is mapped to the equivalent raw threshold (`Model.rawThreshold`, [ADR-0004](../adr/0004-curves-on-raw-scores.md)); computing ROC on the rounded `p` would lower Card Watch's AUC by about 0.02.
 - **Stale calibration:** `a, b` are fitted once. When the base rate changes during a contract, the true posterior moves by `logit(π_new) − logit(π_old)` but the badges keep the old mapping, so "p = 0.30" no longer means 30 %. Retrain (§6.2) refits it.
 - A **reliability diagram** (10 bins: mean predicted `p` against the observed share of positives, the diagonal as reference) is shown in the sandbox and on the results screen of calibrated contracts.
 
@@ -83,7 +83,7 @@ The live panel, the pile and the live ring on the charts use the last `PILE_WIND
 
 ## 4. Curves
 
-All curves of the live panel are computed on the **validation set** (the model as the team knows it) and recomputed when it changes (start of a contract, Retrain, a Lab purchase in the sandbox). The operating point is the curve's point at the current threshold.
+All curves of the live panel are computed on the **validation set** (the model as the team knows it) and recomputed when it changes (start of a contract, Retrain, a Lab purchase in the sandbox). The operating point is the curve's point at the current threshold. The curves, ROC AUC and AP are computed on the raw score `s` even when calibrated; with Calibration the operating point of `p ≥ t` is the curve's point at the equivalent raw threshold ([ADR-0004](../adr/0004-curves-on-raw-scores.md)).
 
 - **ROC**: for every threshold `t` in 0.00, 0.01, …, 1.00 the point (FPR(t), TPR(t)); drawn as a polyline from (1, 1) to (0, 0), with the chance diagonal. **ROC AUC** by the trapezoid rule over these points; it equals the Mann–Whitney statistic (the probability that a random positive scores higher than a random negative, ties counted half). The sandbox also shows the theoretical `Φ(d'/√2)`.
 - **PR**: the point (recall(t), precision(t)) for every `t` with at least one flagged item; the baseline is a horizontal line at the prevalence `π` (a random model's precision). **Average precision** `AP = Σ (Rₙ − Rₙ₋₁) · Pₙ` over thresholds from high to low (the scikit-learn definition, no interpolation). Points are joined by straight lines for the drawing; the cheat sheet notes that linear interpolation in PR space is optimistic and AP does not use it.
@@ -163,3 +163,9 @@ Used by C11 and the sandbox's Top-k mode.
 | `STAR3_SHARE` | 0.9 | share of the hindsight-best profit for ★★★ |
 | `TOPK_DOCS` | 30 | documents per query |
 | `DEMO_SWEEP_S` | 20 | attract demo: seconds per full threshold sweep |
+| `SCORE_MIN` / `SCORE_MAX` | 0.01 / 0.99 | the clamps of scores and calibrated `p` (§2.1) |
+| `PLATT_MAX_ITER` / `PLATT_TOL` | 25 / 1e−9 | Platt scaling's Newton steps and stopping step size (§2.3) |
+| `RELIABILITY_BINS` | 10 | bins of the reliability diagram (§2.3) |
+| `AMOUNT_LOG_MEAN` / `AMOUNT_LOG_SD` / `AMOUNT_FRAUD_SHIFT` | ln 60 / 1.1 / 0.4 | payment amounts (§2.4) |
+| `AMOUNT_MIN` / `AMOUNT_MAX` | $1 / $5 000 | clamps of an amount |
+| `FRAUD_TP` / `FRAUD_FP` / `FRAUD_COMMISSION` | $0 / −$5 / 0.02 | fraud prices (03 §2); a missed fraud costs its amount |
