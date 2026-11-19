@@ -5,7 +5,9 @@
 // canvasScale), the geometry of its parts (score axis, belt, gate, pile, the threshold handle at the right
 // edge, the review band's handle at the left edge while there is a desk), the mapping between a score and a
 // height, hit-testing for drags and for taps on items, the animation clock of the reveals
-// and the frame: render/belt.js and render/pile.js draw the parts. The screen layouts (desktop, phone
+// and the frame: render/belt.js and render/pile.js draw the parts. In a top-k run (02 §7) the documents of a
+// query ride as one column (spread over a few lanes by rank) and the handle sets k: its height is k's line
+// value (Topk.valueOfK), so dragging up shows fewer documents. The screen layouts (desktop, phone
 // landscape, phone portrait, 04 §4.2) are chosen here and applied as a class on #play; styles.css does the rest.
 // Reads State; never changes it. Used by game.js (resize, frame), core/input.js through game.js (hit-testing)
 // and ui/coach.js (where an item or a handle is on the page).
@@ -84,12 +86,23 @@ const Render = (() => {
     const reach = Math.max(G.itemSize * 0.75, 18);
     let best = null, bestD = reach;
     for (const it of State.belt) {
-      const ix = G.beltX0 + clamp(Stream.progress(it), 0, 1) * (G.gateX - G.beltX0), iy = yOf(it[run.key]);
+      const ix = xOf(it), iy = yOf(it[run.key]);
       const d = Math.hypot(ix - x, iy - y);
       if (d < bestD) { bestD = d; best = it; }
     }
     return best;
   }
+  // where an item riding the belt is drawn: by its ride; in a top-k run a query's documents spread over five
+  // lanes by rank around their column, so the ones at nearly the same height do not hide each other
+  function xOf(it) {
+    const x = G.beltX0 + clamp(Stream.progress(it), 0, 1) * (G.gateX - G.beltX0);
+    return State.run && State.run.topk && it.rank !== undefined ? x + ((it.rank % 5) - 2) * G.itemSize * TOPK_SPREAD / 2 : x;
+  }
+  // the size of an item's drawing (a top-k column holds many documents: they are drawn smaller)
+  function sizeOf() { return State.run && State.run.topk ? G.itemSize * 0.62 : G.itemSize; }
+  // the line value the handle sits at: the threshold, or k's value in a top-k run
+  function lineValue() { return State.run && State.run.topk ? Topk.valueOfK(State.k) : State.threshold; }
+
   // a score's worth of pixels: a relative drag moves the line by Δy / span
   function span() { return G.bottom - G.top; }
 
@@ -113,6 +126,7 @@ const Render = (() => {
     Belt.drawItems(ctx, G, run, time);
     Belt.drawFlights(ctx, G, run, time);
     Belt.drawBand(ctx, G, run);
+    if (run.topk) Belt.drawCuts(ctx, G, run);
     Belt.drawThreshold(ctx, G, run);
     Belt.drawTags(ctx, G, run, time);
     placeSlider();
@@ -121,12 +135,15 @@ const Render = (() => {
   // the screen reader's slider sits over the handle (04 §10)
   let sliderT = null;
   function placeSlider() {
-    const t = State.threshold;
-    if (t === sliderT) return;
-    sliderT = t;
+    const topk = !!(State.run && State.run.topk);
+    const t = lineValue(), key = (topk ? 'k' : 't') + t;
+    if (key === sliderT) return;
+    sliderT = key;
     slider.style.top = (yOf(t) - 18) + 'px';
-    slider.setAttribute('aria-valuenow', t.toFixed(2));
-    slider.setAttribute('aria-valuetext', (State.run && State.run.key === 'p' ? 'p ≥ ' : 't = ') + t.toFixed(2));
+    slider.setAttribute('aria-valuemin', topk ? '1' : '0');
+    slider.setAttribute('aria-valuemax', topk ? String(TOPK_DOCS) : '1');
+    slider.setAttribute('aria-valuenow', topk ? String(State.k) : t.toFixed(2));
+    slider.setAttribute('aria-valuetext', topk ? 'k = ' + State.k : (State.run && State.run.key === 'p' ? 'p ≥ ' : 't = ') + t.toFixed(2));
   }
 
   // where things are on the page (CSS px, for the coach marks): an item riding the belt, the threshold's handle
@@ -134,18 +151,15 @@ const Render = (() => {
     const r = canvas.getBoundingClientRect();
     return { x: r.left + x, y: r.top + y };
   }
-  function itemPoint(item) {
-    const p = clamp(Stream.progress(item), 0, 1);
-    return pagePoint(G.beltX0 + p * (G.gateX - G.beltX0), yOf(item[State.run.key]));
-  }
-  function handlePoint() { return pagePoint(G.handleX + (G.W - G.handleX) / 2, yOf(State.threshold)); }
+  function itemPoint(item) { return pagePoint(xOf(item), yOf(item[State.run.key])); }
+  function handlePoint() { return pagePoint(G.handleX + (G.W - G.handleX) / 2, yOf(lineValue())); }
   function bandPoint() {
     const d = State.review;
     return pagePoint(G.bandW / 2, yOf(d ? Review.lowOf(d, State.threshold) : 0));
   }
 
   return {
-    G, ctx, layoutName, resize, yOf, valueAt, onHandle, onBandHandle, onPlayArea, itemAt, span, reducedMotion, sinceGate, frame,
+    G, ctx, layoutName, resize, yOf, valueAt, xOf, sizeOf, lineValue, onHandle, onBandHandle, onPlayArea, itemAt, span, reducedMotion, sinceGate, frame,
     itemPoint, handlePoint, bandPoint, get time() { return time; }
   };
 })();

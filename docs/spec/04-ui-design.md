@@ -57,7 +57,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 | **Lab** | 01 §5: the balance; a model card per family (its scenarios with their AUC, a mini binormal ROC); the upgrade cards (price, effect, why it works in real ML, Buy / Bought / Needs … first / Not enough money). Pointing at an upgrade (hover or focus) shows "AUC 0.94 → 0.95" on the families it touches, and their mini ROC morphs to the new curve over the old one, faint. |
 | **Sandbox** | The play screen with the knobs panel (01 §7) instead of the HUD's contract chips: docked at the right on desktops, a drawer from the right on phones (closed at first); the HUD's ☰ button opens and closes it. |
 | **Cheat sheet** | A grid of cards (03 §4), two or three columns on desktop, one on phones; a card opens full-size with its live pile picture; a search field filters by name; the "Which metric?" flow as the first card. Opened from play, it is an overlay over the paused game with a Back button. |
-| **End card** | After C12: fireworks (`ui/fireworks.js`, as in `ivan`), total stars, the titles earned, "Play again on Hard?" |
+| **End card** | After a won C12, from its results ("The end"): fireworks over the panel (`ui/fireworks.js`, from `ivan`'s city-builder, in the game's orange, blue and amber; none with `prefers-reduced-motion`), "Cutoff & Co. is now a unicorn", the total stars, the titles earned (03 §2), and the buttons **Play again on Hard** (default; it sets the difficulty and opens the map; hidden when already on Hard), **Map**, **Start screen** (`ui/endcard.js`). |
 
 ## 4. The play screen
 

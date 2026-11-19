@@ -52,6 +52,8 @@ const Coach = (() => {
       if (m.params.includes('target')) params.target = run.goalTarget !== null ? run.goalTarget.toFixed(2) : '';
       if (m.params.includes('desk')) params.desk = State.review ? State.review.max : REVIEW_QUEUE;
       if (m.params.includes('window')) params.window = PSI_WINDOW;
+      if (m.params.includes('lag')) params.lag = ADV_LAG_S;
+      if (m.params.includes('docs')) params.docs = TOPK_DOCS;
     }
     return Glossary.marked(tr(m.text, params));
   }

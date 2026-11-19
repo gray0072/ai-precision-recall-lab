@@ -20,6 +20,7 @@ const State = {
   pile: [],                     // the rolling window of decided items, oldest first: { …item, flagged, outcome }
   pileVersion: 0,               // bumped whenever the pile's contents change (the renderer caches its layout)
   threshold: 0.5,               // the player's threshold t, 0.00–1.00 in steps of 0.01
+  k: TOPK_K_DEFAULT,            // the knob of a top-k run (sim/topk.js): the k best documents of each query are shown
   paused: false,                // the pause dialog is open (01 §12): the belt, the stream and the timers stop
   held: false,                  // a coach mark is waiting for the player (01 §13): the stream stops, the line still moves
   highlight: null,              // the live panel points at a metric: { id, num: ['TP'], den: ['TP', 'FP'] }

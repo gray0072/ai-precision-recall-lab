@@ -59,7 +59,17 @@ const REVIEW_BAND_DEFAULT = 0.15; // a new review band starts this far below the
 const QUIZ_BONUS = 50;         // $ for the right answer in a briefing
 const STAR3_SHARE = 0.9;       // share of the hindsight-best profit for ★★★
 const TOPK_DOCS = 30;          // documents per query (02 §7)
+const TOPK_RELEVANT = [2, 8];  // a query has R relevant documents, uniform in this range (02 §7)
+const TOPK_WINDOW = 20;        // queries in the rolling window of P@k / R@k (02 §7)
+const TOPK_K_DEFAULT = 5;      // k at the start of a top-k run
+const TOPK_GOAL_GRACE = 3;     // queries before a top-k goal chip shows a colour
+const SANDBOX_TOPK_RATE = 0.4; // queries per second in the sandbox's Top-k mode at ×1
+const TOPK_SPREAD = 0.55;      // the documents of a query sit across this share of the item size around their column
 const DEMO_SWEEP_S = 20;       // attract demo: seconds per full threshold sweep
+const DEMO_T_LOW = 0.15;       // attract demo: the bot sweeps the threshold between these two values
+const DEMO_T_HIGH = 0.85;
+const DEMO_PREFILL = 160;      // attract demo: items put on the pile at once, so it looks alive from the start
+const PHASE_GAP_S = 3;         // C12: seconds of an empty belt between two phases (after the last item's ride)
 
 // ---------- The Lab (spec 01 §5, 03 §3): price ($) and d' bonus of each upgrade ----------
 const UPGRADE_PRICES = {

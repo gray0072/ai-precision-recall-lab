@@ -7,7 +7,9 @@
 // buttons on the right (Retrain with its progress, the sandbox's knobs, sound 🔊 / 🔇, pause), and the
 // banners of incidents, the drift alert and the retrain. The goal chip shows the cumulative value
 // of the goal's metric against the target: no colour for the first GOAL_GRACE_ITEMS items, then green when it
-// is met, amber within GOAL_CLOSE, red below. Safe-area aware through styles.css. game.js passes the buttons'
+// is met, amber within GOAL_CLOSE, red below. A top-k contract counts queries and its goal is the mean R@k;
+// a contract of phases (C12) names the phase in its title chip, its goal chip shows the phase's goal (hidden in
+// a phase without one) and a banner announces each new phase. Safe-area aware through styles.css. game.js passes the buttons'
 // actions; update() runs every frame and touches the DOM only when a value changed.
 // ============================================================
 
@@ -55,15 +57,19 @@ const Hud = (() => {
     if (!run) return;
     const contract = run.kind === 'contract';
     if (contract) {
-      put('hudTitle', run.def.id + ' · ' + tr(run.def.name));
-      put('hudCount', tr('{n} / {all}', { n: run.count, all: run.def.items }));
+      put('hudTitle', run.def.id + ' · ' + tr(run.def.name) + (run.def.phases
+        ? ' · ' + tr('phase {n} / {all}: {name}', { n: run.phase + 1, all: run.def.phases.length, name: tr(run.scenario.name) }) : ''));
+      put('hudCount', run.topk
+        ? tr('query {n} / {all}', { n: Math.floor(run.count / TOPK_DOCS), all: run.def.items })
+        : tr('{n} / {all}', { n: run.count, all: run.total }));
       put('hudMoney', money(run.money));
       flag('hudMoney', 'sign', Math.sign(Math.round(run.money)), (s) => {
         $('hudMoney').classList.toggle('good', s > 0);
         $('hudMoney').classList.toggle('bad', s < 0);
       });
+      flag('hudGoal', 'shown', !!run.goal, (on) => { $('hudGoal').hidden = !on; });
       if (run.goal) {
-        const v = Contract.goalValue(run.totals, run.goal);
+        const v = Contract.liveGoalValue(run);
         put('hudGoal', tr(METRIC_NAMES[run.goal.metric]) + ' ' + (v === null ? '—' : v.toFixed(2)) + ' ≥ ' + run.goalTarget.toFixed(2));
         flag('hudGoal', 'state', run.goalState, (s) => {
           const el = $('hudGoal');
@@ -88,7 +94,7 @@ const Hud = (() => {
     desk();
     flag('mode', 'contract', contract, (c) => {
       $('hudMoney').hidden = !c;
-      $('hudGoal').hidden = !c || !run.goal;
+      if (!c) $('hudGoal').hidden = true;
       $('hudMeter').hidden = !c || run.allowance === null;
       $('knobsBtn').hidden = c;
       if (!c) { $('hudPsi').hidden = true; $('retrainBtn').hidden = true; $('hudIncident').hidden = true; }
@@ -189,6 +195,8 @@ const Hud = (() => {
   GameEvents.on('incidentWarning', (e) => Screens.banner(tr('Heads up: {name} in {s} s.', { name: tr(e.incident.name), s: Math.round(e.inS) })));
   GameEvents.on('incidentStarted', (e) => Screens.banner(tr(e.incident.name) + ' ' + tr(e.incident.note)));
   GameEvents.on('driftAlert', (e) => Screens.banner(tr('Drift alert: PSI {v}. The inputs changed: base rate or drift? Retrain when the model is out of date.', { v: e.psi.toFixed(2) })));
+  GameEvents.on('phaseStarted', (e) => Screens.banner(tr('Phase {n}: {name}. New client, new model, new prices — and the pile starts afresh.',
+    { n: e.phase + 1, name: tr(SCENARIOS[e.scenario].name) })));
   GameEvents.on('retrainDone', () => Screens.banner(tr('Retrained: the model knows the new data. New validation set, new curves, PSI starts again.')));
 
   function reset() { shown = {}; fullUntil = 0; }
@@ -199,5 +207,6 @@ const Hud = (() => {
 // the names of the metrics a goal can be on; they stay English in every language (04 §8)
 const METRIC_NAMES = {
   precision: 'Precision', recall: 'Recall', f1: 'F1', fbeta: 'F-beta', accuracy: 'Accuracy', fpr: 'FPR',
-  specificity: 'Specificity', mcc: 'MCC', balancedAccuracy: 'Balanced accuracy'
+  specificity: 'Specificity', mcc: 'MCC', balancedAccuracy: 'Balanced accuracy',
+  recallAtK: 'Recall@k (mean)', precisionAtK: 'Precision@k (mean)'
 };

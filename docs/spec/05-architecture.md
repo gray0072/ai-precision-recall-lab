@@ -45,11 +45,14 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── model.js            the binormal score model, effective d', quantization, Platt scaling, true posterior
 │   ├── stream.js           pre-generating a contract's stream, the validation set, arrivals onto the belt, the gate
 │   ├── metrics.js          counts, every metric of 02 §3.2, the rolling window, ROC / PR / profit curves, AUC, AP, PSI
-│   ├── contract.js         prices and money, goals, the outbreak meter, failure, stars, the hindsight-best search
+│   ├── contract.js         prices and money, goals, the outbreak meter, failure, stars, the hindsight-best search;
+│   │                       the phases of C12 (one stream, model and goal per phase); top-k and adversary hooks
 │   ├── incidents.js        the incidents' schedule, warnings and starts; the drift monitor (PSI, the alert); Retrain;
-│   │                       price change, rush hour (the adversary in I06); a headless retrain at the alert
+│   │                       price change, rush hour; the adversary (crafted items, the threshold log, the aim);
+│   │                       a headless retrain at the alert
 │   ├── review.js           the review desk: band, queue, capacity, manual sends (live and headless)
-│   ├── topk.js             queries, per-query top-k, precision@k / recall@k
+│   ├── topk.js             queries and ranks, per-query top-k, precision@k / recall@k, the curves over k,
+│   │                       the hindsight search over k
 │   ├── sandbox.js          the sandbox's knobs applied to the model and the stream
 │   └── demo.js             the attract demo's threshold bot
 ├── art/
@@ -62,7 +65,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── belt.js             score axis, belt, items, gate, threshold line, review band, ghost line
 │   └── pile.js             the mirrored histogram and its four regions
 ├── ui/
-│   ├── screens.js          start, pause, the confirmation dialog, end card; overlay show / hide, focus moving
+│   ├── screens.js          start, pause, the confirmation dialog; overlay show / hide, focus moving
 │   ├── map.js              the campaign map: acts, contract cards with stars and locks, the balance
 │   ├── briefing.js         the briefing panel and the quick question
 │   ├── hud.js              HUD chips and meters, incident banners
@@ -74,7 +77,8 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── glossary.js         the cheat sheet screen and card overlay
 │   ├── coach.js            coach mark bubbles
 │   ├── sounds.js           game events → sounds; the only file that plays them
-│   └── fireworks.js        the end card's fireworks (from ivan)
+│   ├── fireworks.js        the end card's fireworks (from ivan)
+│   └── endcard.js          the campaign's end card: total stars, titles, Play again on Hard
 ├── tests/                  Node tests of sim/ (node --test)
 │   ├── load.js             loads constants, data and sim files into a vm context (plain scripts)
 │   ├── smoke.test.js       the scripts load; the state and the difficulty table are there
@@ -84,12 +88,15 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── metrics.test.js     every metric, empty denominators, ROC = Mann–Whitney, AP = scikit-learn, profit curve
 │   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
 │   ├── campaign.test.js    the data tables, the live contract run (gate money, goal chip, outbreak, cheat F, results,
-│   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save)
+│   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save);
+│   │                       C12's phases (stream, prices, live switch, per-phase results), Act 3 data, the demo
 │   ├── incidents.test.js   the schedule, price changes, a base rate shift, drift and AUC, PSI, C09's alert and
-│   │                       Retrain, stale Platt scaling, live incident events, the cheat I
+│   │                       Retrain, stale Platt scaling, live incident events, the cheat I; the adversary: the
+│   │                       crafted share, the aim (raw and calibrated), C10 held still vs a band, the aimed hindsight
 │   ├── review.test.js      the desk's capacity and rate, the band's money, the band-pair search vs play(), the live
 │   │                       desk with taps and "Desk full", the sandbox's band
-│   └── topk.test.js
+│   └── topk.test.js        queries and ranks, P@k / R@k on a known query, the means, the curves over k, the
+│                           cut, the knob's steps, C11 headless and live, the sandbox's Top-k mode
 ├── tools/
 │   ├── balance-check.js    bot plays every contract at several fixed thresholds and the hindsight-best;
 │   │                       prints money, goal feasibility, star reachability per difficulty
@@ -119,7 +126,7 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 ## 4. State and events
 
 - **Shared state** lives in `sim/state.js` as plain globals (`State.run`, `State.belt`, `State.pile`, `State.threshold`, `State.review`, `State.difficulty`, `State.screen`); other files read and change it there.
-- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}` (`grace` / `met` / `close` / `broken`), `incidentWarning {kind, inS, incident}`, `incidentStarted {kind, incident}`, `driftAlert {psi}`, `outbreak`, `deskFull {item}`, `retrainDone`, `contractEnded {failed}` (null, `outbreak` or `bankrupt`), `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
+- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}` (`grace` / `met` / `close` / `broken`), `incidentWarning {kind, inS, incident}`, `incidentStarted {kind, incident}`, `driftAlert {psi}`, `outbreak`, `deskFull {item}`, `retrainDone`, `phaseStarted {phase, scenario}` (C12), `contractEnded {failed}` (null, `outbreak` or `bankrupt`), `purchase {upgrade}`; the end card's `fireworkLaunch` / `fireworkBang` (UI events for the sounds). A demo run (`State.run.kind === 'demo'`) emits the same item events; the sounds must ignore it. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
 - **The main loop stays thin:** each frame (`requestAnimationFrame`, limited to 60 fps) `game.js` reads the input into the threshold(s), calls `Stream.update(dt)`, `Review.update()`, `Incidents.update(dt)`, `Contract.update()` in this order (the gate itself drains the desk to each item's exact gate time, and checks the drift monitor after each decision), then `Render.frame()` and, when dirty, the live panel and the charts.
 - **Determinism:** all randomness comes from `core/rng.js` streams seeded per attempt (02 §2.2); `Math.random` is not used in `sim/`.
 

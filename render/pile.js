@@ -6,7 +6,8 @@
 // right, so the threshold line splits the pile into the four cells of the confusion matrix in the matrix's
 // own layout: TP top left, FP top right, FN bottom left, TN bottom right. Each square is coloured by its
 // outcome at the current threshold (the rolling window re-evaluated, 02 §3.4), so moving the line re-colours
-// the pile at once. The squares shrink and stack in several lines per row as the rows fill up; the oldest
+// the pile at once (in a top-k run: by whether each document is in its query's top k now, and no region
+// names, as there is no one line). The squares shrink and stack in several lines per row as the rows fill up; the oldest
 // fifth of the window fades. Pointing at a metric (State.highlight) dims what is not in its formula.
 // The layout (where each square sits) depends only on the pile and the size, so it is cached by pileVersion.
 // Used by render/render.js (frame) and render/belt.js (the slot an item flies to).
@@ -84,7 +85,7 @@ const Pile = (() => {
       const it = pile[i];
       const since = Render.sinceGate(it);
       if (since !== null && since < Belt.LAND_S && !Render.reducedMotion()) continue;   // still flying
-      const out = Stream.outcome(atOrAbove(it[k], t), it.y);
+      const out = Stream.outcome(Stream.flaggedNow(run, it), it.y);
       let a = 1;
       const age = i - Math.max(0, oldest);
       if (n >= run.window * 0.8 && age < fadeN) a = 0.3 + 0.7 * age / fadeN;
@@ -105,7 +106,8 @@ const Pile = (() => {
     }
     ctx.globalAlpha = 1;
 
-    // the four regions' names, next to the line: the pile is the confusion matrix
+    // the four regions' names, next to the line: the pile is the confusion matrix (top-k has no one line)
+    if (run.topk) return;
     const y = Render.yOf(t);
     const fs = G.W < 600 ? 10 : 11;
     ctx.font = '700 ' + fs + 'px Segoe UI, Arial, sans-serif';

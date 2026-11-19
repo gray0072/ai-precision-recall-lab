@@ -287,3 +287,103 @@ test('a ★★ target per level; Act 2 contracts are complete', () => {
   for (const id of ['C06', 'C07', 'C08', 'C09']) assert.ok(!CONTRACTS[id].soon, id);
   assert.equal(Contract.goalTarget(CONTRACTS.C06.goal, 'hard'), CONTRACTS.C06.goal.min, 'the KPI is fixed');
 });
+
+// ---------- Act 3 (I06) ----------
+
+test('C12: three phases one after another, each with its own scenario, prices and goal; a gap between them', () => {
+  const L = load();
+  const def = L.CONTRACTS.C12;
+  const items = L.Contract.streamOf(def, 'medium', 11);
+  assert.equal(items.length, def.phases.reduce((a, ph) => a + ph.items, 0));
+  items.forEach((it, k) => assert.equal(it.i, k));
+  let start = 0;
+  def.phases.forEach((ph, p) => {
+    const mine = items.filter((it) => it.phase === p);
+    assert.equal(mine.length, ph.items);
+    assert.equal(mine[0].i, start);
+    assert.equal(L.Contract.isFraud(ph.prices), mine.every((it) => it.amount !== undefined));
+    if (p) {   // the belt is empty when a phase begins: its first item arrives after the last one of the phase before has passed the gate
+      const prev = items[start - 1];
+      assert.ok(mine[0].at >= prev.at + L.BELT_TRAVEL_S + L.PHASE_GAP_S - 1e-9);
+    }
+    start += ph.items;
+  });
+  // the prices of each phase, and the price changes within it
+  const at = (i) => L.Incidents.pricesAt(def, i, def.incidents);
+  assert.equal(at(0), def.phases[0].prices);
+  assert.equal(at(60).FP, -20);
+  assert.equal(at(120), def.phases[1].prices);
+  assert.equal(at(180).FN, -60);
+  assert.equal(at(240), def.phases[2].prices);
+  assert.equal(L.Contract.values(at(300), { amount: 100 }).FP, -2.5);
+  assert.equal(L.Contract.values(at(299), { amount: 100 }).FP, L.FRAUD_FP);
+});
+
+test('C12 live: the phase switches with its first item (scenario, model, goal, a fresh pile); per-phase results and stars', () => {
+  const L = load();
+  const def = L.CONTRACTS.C12;
+  const started = [];
+  L.GameEvents.on('phaseStarted', (e) => started.push(e.phase));
+  const run = L.Contract.start(def, { difficulty: 'medium', seed: 21, upgrades: ['U-calib'] });
+  const ts = [0.8, 0.3, 0.85];
+  let g = 0, pileAtSwitch = null;
+  while (!L.Contract.update() && g++ < 200000) {
+    const before = run.phase;
+    L.State.threshold = ts[run.phase];
+    L.Stream.update(0.05);
+    L.Incidents.update(0.05);
+    if (run.phase !== before && pileAtSwitch === null) pileAtSwitch = L.State.pile.length;
+  }
+  assert.deepEqual(started, [1, 2]);
+  assert.equal(run.scenario.id, 'fraud');
+  assert.ok(pileAtSwitch <= 1);
+  assert.equal(run.goal, null);
+  // each phase's items are calibrated with that phase's own Platt fit
+  for (const it of run.items) assert.equal(it.p, L.Model.calibrate(it.s, run.phaseData[it.phase].platt));
+  const r = L.Contract.results(run);
+  assert.equal(r.phases.length, 3);
+  assert.equal(r.goal, null);
+  assert.equal(r.goalMet, r.phases.every((q) => q.goalMet));
+  assert.ok(Math.abs(r.phases.reduce((a, q) => a + q.money, 0) - r.money) < 0.02);
+  assert.equal(r.best.feasible, r.phases.every((q) => q.best.feasible));
+  if (r.best.feasible) assert.ok(Math.abs(r.best.money - r.phases.reduce((a, q) => a + q.best.money, 0)) < 0.02);
+  assert.equal(r.profit, null);
+  assert.equal(r.stars, L.Contract.stars(r, L.Contract.targetOf(def, 'medium'), r.best));
+  // headless: the per-phase hindsight agrees with the results' phases
+  const h = L.Contract.hindsightPhases(run.items, def, 'medium', 'p');
+  assert.deepEqual(Array.from(h.t), Array.from(r.phases.map((q) => q.best.t)));
+});
+
+test('Act 3 data: C10 lends a desk and has the fraud ring; C11 is top-k with a mean R@k goal; the end titles', () => {
+  const L = load();
+  const { CONTRACTS, END_TITLES } = L;
+  assert.ok(CONTRACT_ORDER_ALL(L).every((id) => !CONTRACTS[id].soon));
+  assert.equal(CONTRACTS.C10.lend.review, 1);
+  assert.equal(CONTRACTS.C10.incidents[0].kind, 'adversary');
+  assert.equal(CONTRACTS.C11.topk, true);
+  assert.equal(CONTRACTS.C11.goal.metric, 'recallAtK');
+  assert.equal(CONTRACTS.C12.phases.length, 3);
+  assert.deepEqual(Array.from(END_TITLES.map((t) => t.id)), ['done', 'allStars', 'hard']);
+  // a won C12 is the end of the campaign: no next contract
+  const mem = memory();
+  L.Campaign.init(mem);
+  L.Campaign.open('C12');
+  assert.equal(L.Campaign.unlocked('C12'), true);
+  assert.equal(L.Campaign.nextOpen('C12'), null);
+});
+function CONTRACT_ORDER_ALL(L) { return Array.from(L.CONTRACT_ORDER); }
+
+test('the attract demo: Abstract, the pile pre-filled, a slow sweep of the threshold between its two ends', () => {
+  const L = load();
+  const run = L.Demo.start(3);
+  assert.equal(run.kind, 'demo');
+  assert.equal(run.scenario.id, 'abstract');
+  assert.equal(L.State.pile.length, L.DEMO_PREFILL);
+  assert.equal(run.window, L.PILE_WINDOW);
+  const seen = new Set();
+  for (let s = 0; s < 20 * 30; s++) { L.Demo.update(1 / 30); seen.add(L.State.threshold); }
+  assert.ok(Math.min(...seen) <= L.DEMO_T_LOW + 0.01 && Math.max(...seen) >= L.DEMO_T_HIGH - 0.01);
+  assert.equal(L.Demo.thresholdAt(0), L.Demo.thresholdAt(L.DEMO_SWEEP_S));
+  assert.equal(L.Demo.thresholdAt(L.DEMO_SWEEP_S / 2), L.DEMO_T_HIGH);
+  assert.ok(L.State.pile.length > L.DEMO_PREFILL || L.State.pile.length === L.PILE_WINDOW);
+});

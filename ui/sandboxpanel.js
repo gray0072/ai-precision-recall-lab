@@ -5,7 +5,9 @@
 // phones. Scenario (with its drawings), base rate (a logarithmic slider), separation d' with the AUC it gives,
 // calibrated scores, the true class on the belt, formula view, the review band, speed, pause the belt / step one item, the
 // prices of the four outcomes (the profit curve and, with calibration, the cost-optimal ghost line),
-// Generate 1 000 and Clear. Every change goes through Sandbox.set and is remembered as prLab.sandbox.v1.
+// Generate 1 000 and Clear, and the Top-k mode (the Search Ranker scenario: queries of pages, the knob is k;
+// base rate, calibration and the review band do not apply to it and are disabled). Every change goes through
+// Sandbox.set and is remembered as prLab.sandbox.v1.
 // Used by game.js (build, open / close, save).
 // ============================================================
 
@@ -84,6 +86,7 @@ const SandboxPanel = (() => {
     toggles.appendChild(toggle('sbShow', tr('Show true class')));
     toggles.appendChild(toggle('sbFormulas', tr('Formula view')));
     toggles.appendChild(toggle('sbReview', tr('Review band')));
+    toggles.appendChild(toggle('sbTopk', tr('Top-k mode')));
     panel.appendChild(toggles);
 
     panel.appendChild(slider('sbSpeed', tr('Speed'), 0, SANDBOX_SPEEDS.length - 1, 1));
@@ -129,6 +132,7 @@ const SandboxPanel = (() => {
     $('sbShow').addEventListener('click', () => change('showClass', !State.run.knobs.showClass));
     $('sbFormulas').addEventListener('click', () => change('formulas', !State.run.knobs.formulas));
     $('sbReview').addEventListener('click', () => change('review', !State.run.knobs.review));
+    $('sbTopk').addEventListener('click', () => change('scenario', State.run.topk ? 'abstract' : 'retrieval'));
     $('sbFreeze').addEventListener('click', () => { State.run.frozen = !State.run.frozen; render(); });
     $('sbStep').addEventListener('click', () => { Sandbox.step(); });
     prices.querySelectorAll('input').forEach((input) => input.addEventListener('change', () => {
@@ -169,11 +173,20 @@ const SandboxPanel = (() => {
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    $('sbScenNote').textContent = sc.id === 'abstract'
-      ? tr('Dots: orange are the positives (the hunted class), blue the negatives.')
-      : tr('Positive (the hunted class): {pos}. Negative: {neg}.', { pos: tr(sc.positive), neg: tr(sc.negative) });
+    const topk = !!run.topk;
+    $('sbScenNote').textContent = topk
+      ? tr('Top-k: queries of {n} pages, {a} to {b} of them relevant. Each query shows its k best-scored pages: drag the handle or press ↑ / ↓ to change k.',
+        { n: TOPK_DOCS, a: TOPK_RELEVANT[0], b: TOPK_RELEVANT[1] })
+      : sc.id === 'abstract'
+        ? tr('Dots: orange are the positives (the hunted class), blue the negatives.')
+        : tr('Positive (the hunted class): {pos}. Negative: {neg}.', { pos: tr(sc.positive), neg: tr(sc.negative) });
+    press('sbTopk', topk);
+    for (const id of ['sbPrev', 'sbCal', 'sbReview']) {
+      $(id).disabled = topk;
+      $(id).title = topk ? tr('Not in Top-k mode') : '';
+    }
     $('sbPrev').value = toSlider(k.prevalence);
-    $('sbPrevVal').textContent = pct(k.prevalence);
+    $('sbPrevVal').textContent = topk ? '—' : pct(k.prevalence);
     $('sbD').value = Math.round(k.dPrime * 10);
     $('sbDVal').textContent = k.dPrime.toFixed(1) + ' · AUC ' + Model.theoreticalAuc(k.dPrime).toFixed(2);
     $('sbSpeed').value = SANDBOX_SPEEDS.indexOf(k.speed);
@@ -182,12 +195,14 @@ const SandboxPanel = (() => {
     press('sbShow', k.showClass);
     press('sbFormulas', k.formulas);
     press('sbReview', k.review);
-    $('sbReview').title = tr('A band under the threshold whose items go to people: always right, but only {r} per second', { r: REVIEW_RATE[REVIEW_SANDBOX_LEVEL - 1] });
+    if (!run.topk) $('sbReview').title = tr('A band under the threshold whose items go to people: always right, but only {r} per second', { r: REVIEW_RATE[REVIEW_SANDBOX_LEVEL - 1] });
     press('sbFreeze', !!run.frozen);
     panel.querySelectorAll('[data-price]').forEach((input) => {
       if (document.activeElement !== input) input.value = k.prices[input.dataset.price];
     });
-    $('sbPriceNote').textContent = run.pStar === null
+    $('sbPriceNote').textContent = topk
+      ? tr('Top-k: the prices count per page — a relevant page shown is a TP, an irrelevant one shown an FP, a relevant one left out an FN.')
+      : run.pStar === null
       ? tr('With these prices flagging never pays more than passing (or always does).')
       : k.calibrated
         ? tr('Cost-optimal: flag when p ≥ {p} (the dashed line).', { p: run.ghostT.toFixed(2) })

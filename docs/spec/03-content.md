@@ -52,11 +52,23 @@ Act 2 as tuned in I05 (the starting values were: C06 fraud prices, d′ 2.0, 300
 
 | Id | Name | Scenario | Teaches | `π` | `d'` | Items | Rate | Prices | Goal | Special | Fee | ★★ target |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| C10 | Fraud ring | fraud | adversaries game a fixed threshold | 0.04 | 2.4 | 350 | 1.6 | fraud prices | — | adversary from item 100 | $450 | $300 |
-| C11 | Search ranker | retrieval | precision@k and recall@k, RAG | 2–8 of 30 | 1.8 | 25 queries | 1 query / 4 s | +3 per relevant shown, −1 per irrelevant shown, −2 per relevant missed | mean Recall@k ≥ 0.80 | the knob is k (02 §7) | $450 | $150 |
-| C12 | The big pitch | spam → fever → fraud | everything | per phase | per phase | 3 × 120 | 1.6 | per phase | per phase: Precision ≥ 0.90 / Recall ≥ 0.85 / — | a price change in each phase (FP ×2, FN ×2, FP ×0.5); rush hour in phase 3 | $800 | $300 |
+| C10 | Fraud ring | fraud | adversaries game a fixed threshold | 0.04 → 0.12 | 2.4 | 350 | 1.6 | +25 / −3 / −25 / 0 | — | the fraud ring (adversary, 02 §6.3) from item 100, which also raises the base rate to 12 %; review desk I lent for free | $450 | $270 / $220 / $150 |
+| C11 | Search ranker | retrieval | precision@k and recall@k, RAG | 2–8 of 30 | 1.8 | 25 queries | 1 query / 4 s | +3 per relevant shown, −1 per irrelevant shown, −2 per relevant missed | mean Recall@k ≥ 0.80 | the knob is k (02 §7) | $450 | $130 / $100 / $45 |
+| C12 | The big pitch | spam → fever → fraud | everything | 0.25 / 0.10 / 0.04 | 2.4 / 2.2 / 2.4 | 3 × 120 | 1.6 | +3 / −10 / 0 / 0 · +12 / −1 / −30 / 0 · fraud prices | per phase: Precision ≥ 0.90 / Recall ≥ 0.85 / — | a price change in each phase (item 60: FP −$20; item 180: FN −$60; item 300: FP −$2.50); rush hour (rate ×2 for 40 items) at item 280 | $800 | $240 / $200 / $120 |
 
-C12's star rules: ★ needs every phase's goal met; the hindsight-best is computed per phase (one threshold per phase). Completing C12 shows the fireworks and the campaign's end card ("Cutoff & Co. is now a unicorn"), with the total stars.
+★★ targets with three values are per level (Easy / Medium / Hard).
+
+**Act 3 as built in I06** (the starting values were: C10 fraud prices, π 0.04, ★★ $300; C11 ★★ $150; C12 fever π 0.08, ★★ $300). C10 got bounty prices and a lent review desk, and its ring brings more fraud ([ADR-0006](../adr/0006-adversary-aims-at-the-hindsight.md)): with the amounts one crafted payment decided the contract, the hindsight-best was negative on more than 10 % of the streams, and with about four crafted payments in a contract the ring was hardly visible. Its hindsight-best is aimed at too (02 §5.2): a player who holds the line still without a band gets about a third of it (★ only), a band about 0.1 under the line about 95 %. C11 and C12 got per-level ★★ targets near the 10th percentile of the hindsight-best money (25 queries and three phases of 120 items leave a lot to luck); C12's fever phase has 10 % feverish passengers instead of 8 %, so that its recall goal is not decided by one or two passengers.
+
+**C12 — the big pitch:** three phases on one belt, one client each (Inbox Guard, Fever Gate, Card Watch), 120 items each; a phase begins `PHASE_GAP_S` (3 s) after the last item of the one before has passed the gate, with its own model, validation set, calibration, curves, prices and goal, and the pile starts afresh (a banner names the new client). Price changes stay within their phase. Star rules: ★ needs every phase's goal met; the hindsight-best is computed per phase (one fixed threshold, and band, per phase, each on its phase's items) and the ★★★ rule compares with their sum. Completing C12 with a star leads from the results ("The end") to the campaign's end card: fireworks, "Cutoff & Co. is now a unicorn", the total stars, the titles earned and "Play again on Hard?".
+
+### End card titles
+
+| Id | Title | Earned when |
+|---|---|---|
+| done | Head of Thresholds | C12 has a star (the campaign is finished) |
+| allStars | Hindsight Beater | ★★★ on every contract on one level |
+| hard | Hard-nosed Analyst | C12 has a star on Hard |
 
 ### Lesson cards (results screen, "What you learned")
 

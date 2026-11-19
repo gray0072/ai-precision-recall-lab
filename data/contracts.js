@@ -114,8 +114,62 @@ const CONTRACTS = {
     card: 'G-drift'
   },
 
-  // ---------- Act 3 — Scale-up (I06) ----------
-  C10: { id: 'C10', act: 3, name: 'Fraud ring', scenario: 'fraud', teaches: 'adversaries game a fixed threshold', soon: true },
-  C11: { id: 'C11', act: 3, name: 'Search ranker', scenario: 'retrieval', teaches: 'precision@k and recall@k, RAG', soon: true },
-  C12: { id: 'C12', act: 3, name: 'The big pitch', scenario: 'spam', teaches: 'everything', soon: true }
+  // ---------- Act 3 — Scale-up ----------
+  C10: {
+    id: 'C10', act: 3, name: 'Fraud ring', scenario: 'fraud', teaches: 'adversaries game a fixed threshold',
+    prevalence: 0.04, dPrime: 2.4, items: 350, rate: 1.6,
+    prices: { TP: 25, FP: -3, FN: -25, TN: 0 }, goal: null, outbreak: null, fee: 450,
+    target: { easy: 270, medium: 220, hard: 150 },
+    lend: { review: 1 },
+    incidents: [
+      { at: 100, kind: 'adversary', params: { prevalence: 0.12 }, name: 'Fraud ring!',
+        note: 'A ring of fraudsters is at work, and they have learned where your line is: their payments will score just under it.' }
+    ],
+    message: 'A fraud ring has found us. They test our system with small payments and learn exactly where it starts to block: a line that never moves is a line they can walk under. We pay $25 for every fraud you stop and lose $25 on every one that gets through; a blocked customer costs $3. Two of our analysts will check payments for you.',
+    lesson: 'A fixed, predictable threshold is a target. Attackers land just under it; moving it, or checking the zone below it, breaks the trick.',
+    card: 'G-threshold'
+  },
+  C11: {
+    id: 'C11', act: 3, name: 'Search ranker', scenario: 'retrieval', teaches: 'precision@k and recall@k, RAG',
+    topk: true, prevalence: null, dPrime: 1.8, items: 25, rate: 0.25,
+    prices: { TP: 3, FP: -1, FN: -2, TN: 0 }, goal: { metric: 'recallAtK', min: 0.8 }, outbreak: null, fee: 450,
+    target: { easy: 130, medium: 100, hard: 45 },
+    message: 'Our search engine feeds an AI assistant: for every question it hands the top k pages to the language model. Too few pages and the answer misses facts; too many and the model drowns in noise — and every page costs us tokens.',
+    lesson: 'Top-k is a threshold per query. Bigger k: better recall, worse precision — in RAG, more facts for the LLM and more noise and tokens.',
+    card: 'G-topk'
+  },
+  C12: {
+    id: 'C12', act: 3, name: 'The big pitch', scenario: 'spam', teaches: 'everything',
+    prevalence: 0.25, dPrime: 2.4, items: 360, rate: 1.6,
+    prices: { TP: 3, FP: -10, FN: 0, TN: 0 }, goal: null, outbreak: null, fee: 800,
+    target: { easy: 240, medium: 200, hard: 120 },
+    phases: [
+      { scenario: 'spam', prevalence: 0.25, dPrime: 2.4, items: 120, prices: { TP: 3, FP: -10, FN: 0, TN: 0 },
+        goal: { metric: 'precision', min: 0.9 } },
+      { scenario: 'fever', prevalence: 0.1, dPrime: 2.2, items: 120, prices: { TP: 12, FP: -1, FN: -30, TN: 0 },
+        goal: { metric: 'recall', min: 0.85 } },
+      { scenario: 'fraud', prevalence: 0.04, dPrime: 2.4, items: 120, prices: 'fraud', goal: null }
+    ],
+    incidents: [
+      { at: 60, kind: 'priceChange', params: { prices: { TP: 3, FP: -20, FN: 0, TN: 0 } }, name: 'New SLA from the client',
+        note: 'Pigeon Post doubles the fine for a lost letter: a false positive now costs $20.' },
+      { at: 180, kind: 'priceChange', params: { prices: { TP: 12, FP: -1, FN: -60, TN: 0 } }, name: 'New SLA from the client',
+        note: 'Harbor Clinic doubles the cost of a missed fever: a false negative now costs $60.' },
+      { at: 280, kind: 'rush', params: { rate: 2, items: 40 }, name: 'Rush hour!',
+        note: 'Twice as many payments for a while.' },
+      { at: 300, kind: 'priceChange', params: { prices: { fraud: true, FP: -2.5 } }, name: 'New SLA from the client',
+        note: 'Coinpurse Bank halves the cost of a blocked customer: a false positive now costs $2.50.' }
+    ],
+    message: 'Investors are watching. Three of our clients, one after another, on one belt: Pigeon Post wants clean inboxes, Harbor Clinic wants every fever caught, Coinpurse Bank wants its money. Each one will change its terms halfway. Show them one line can serve them all — if you move it.',
+    lesson: 'There is no "best metric", only the best metric for this client\'s costs.',
+    card: 'G-which'
+  }
 };
+
+// The titles of the end card (spec 04 §3), earned when C12 is completed; `when` is checked by ui/endcard.js:
+// 'done' (the campaign is finished), 'allStars' (★★★ on every contract on one level), 'hard' (C12 with a star on Hard)
+const END_TITLES = [
+  { id: 'done', name: 'Head of Thresholds', text: 'You finished the campaign: twelve clients, one line each.' },
+  { id: 'allStars', name: 'Hindsight Beater', text: '★★★ on every contract on one level.' },
+  { id: 'hard', name: 'Hard-nosed Analyst', text: 'The big pitch won on Hard.' }
+];

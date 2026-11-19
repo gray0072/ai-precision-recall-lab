@@ -39,12 +39,14 @@ const Input = (() => {
   // ---------- the threshold ----------
   // h: { active() → bool, threshold() → t, setThreshold(t), onHandle(x), onPlayArea(x, y), valueAt(y),
   //      span() → px per 1.0 of score, tap(x, y), pause(), nextChart(),
-  //      onBandHandle(x), band() → the band's edge or null, setBand(v), tapTarget(x, y) → is there an item to click }
+  //      onBandHandle(x), band() → the band's edge or null, setBand(v), tapTarget(x, y) → is there an item to click,
+//      unit() → the factor on every step of the keys and the wheel (top-k: one step is one document) }
   let h = null;
   let drag = null;   // { id, mode: 'abs' | 'rel', x0, y0, t0, moved }
   let wheelAcc = 0;
 
   const set = (t) => h.setThreshold(clamp(round2(t), 0, 1));
+  const unit = () => (h.unit ? h.unit() : 1);
 
   function local(el, e) {
     const r = el.getBoundingClientRect();
@@ -95,7 +97,7 @@ const Input = (() => {
       if (!h.active()) return;
       e.preventDefault();
       const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
-      const step = e.shiftKey ? THRESHOLD_STEP_SHIFT : THRESHOLD_STEP;
+      const step = (e.shiftKey ? THRESHOLD_STEP_SHIFT : THRESHOLD_STEP) * unit();
       // a mouse notch is one step at once; a trackpad's small deltas add up to notches
       if (Math.abs(px) >= WHEEL_NOTCH_PX) { wheelAcc = 0; set(h.threshold() - Math.sign(px) * step); return; }
       wheelAcc += px;
@@ -123,9 +125,9 @@ const Input = (() => {
       return;
     }
     const t = h.threshold();
-    if (STEPS[e.code]) set(t + STEPS[e.code] * (e.shiftKey ? THRESHOLD_STEP_SHIFT : THRESHOLD_STEP));
-    else if (e.key === 'PageUp') set(t + THRESHOLD_STEP_PAGE);
-    else if (e.key === 'PageDown') set(t - THRESHOLD_STEP_PAGE);
+    if (STEPS[e.code]) set(t + STEPS[e.code] * (e.shiftKey ? THRESHOLD_STEP_SHIFT : THRESHOLD_STEP) * unit());
+    else if (e.key === 'PageUp') set(t + THRESHOLD_STEP_PAGE * unit());
+    else if (e.key === 'PageDown') set(t - THRESHOLD_STEP_PAGE * unit());
     else if (e.key === 'Home') set(1);
     else if (e.key === 'End') set(0);
     else return;

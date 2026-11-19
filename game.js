@@ -7,8 +7,11 @@
 // sandbox scaled by its speed unless the belt is paused; in a contract unless a coach mark holds it, then the
 // incidents and the retrain), checks the contract's end
 // (Contract.update), draws the canvas (Render.frame) and lets the HUD, the live panel and the charts redraw
-// what changed. Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left. The debug
-// cheats of 01 §14 are here too. Loaded last.
+// what changed. Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left. In a top-k run
+// the same controls set k (sim/topk.js: the handle's line value ↔ k, one key step = one document). The attract
+// demo (01 §9, sim/demo.js) runs behind the start screen: dimmed, no input, not with prefers-reduced-motion,
+// paused while the page is hidden or the start panel is scrolled on a phone. A won C12 leads from its results
+// to the end card (ui/endcard.js). The debug cheats of 01 §14 are here too. Loaded last.
 // ============================================================
 
 const Game = (() => {
@@ -20,10 +23,32 @@ const Game = (() => {
   let endAt = 0;                   // when the ended contract's results open (performance.now ms)
 
   const playing = () => State.screen === 'sandbox' || State.screen === 'contract';
+  const demoOn = () => !!(State.run && State.run.kind === 'demo');
+  const onBelt = () => playing() || demoOn();
+  const reducedQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
 
   function showPlay(on) {
     $('play').hidden = !on;
+    $('play').classList.remove('demo');
     if (!on) { SandboxPanel.setOpen(false); LivePanel.reset(); $('tip').hidden = true; Coach.stop(); }
+  }
+
+  // ---------- the attract demo (01 §9) ----------
+  function startDemo() {
+    if (reducedQuery && reducedQuery.matches) return;
+    Demo.start(Rng.freshSeed());
+    showPlay(true);
+    $('play').classList.add('demo');
+    Hud.reset();
+    LivePanel.reset();
+    Charts.showProfit(false);
+    Charts.showCalib(false);
+    lastLayout = null;
+    applyLayout();
+  }
+  // the demo rests while the start panel is scrolled on a phone (battery) or another panel covers it
+  function demoResting() {
+    return Screens.shown !== 'start' || (Render.layoutName() !== 'desktop' && $('overlay').scrollTop > 0);
   }
 
   function leavePlay() {
@@ -39,7 +64,7 @@ const Game = (() => {
     State.paused = false;
     if (screen === 'sandbox') { enterSandbox(); return; }
     leavePlay();
-    if (screen === 'start') Screens.showStart();
+    if (screen === 'start') { Screens.showStart(); startDemo(); }
     else if (screen === 'map') MapScreen.show(briefing);
   }
 
@@ -67,6 +92,7 @@ const Game = (() => {
   // the Lab (01 §5): from the map and the results, once C01 has a star; Back returns where it came from
   function openLab(back) {
     if (!Campaign.labOpen()) { Screens.banner(tr('The Lab opens after the first contract: earn a star on C01.')); return; }
+    leavePlay();
     State.screen = 'lab';
     Lab.show(back);
   }
@@ -99,7 +125,7 @@ const Game = (() => {
     showPlay(true);
     Hud.reset();
     LivePanel.reset();
-    Charts.showProfit(DIFFICULTIES[State.difficulty].profitCurve);
+    Charts.showProfit(DIFFICULTIES[State.difficulty].profitCurve && !run.topk);
     Charts.showCalib(false);
     lastLayout = null;
     applyLayout();
@@ -116,18 +142,20 @@ const Game = (() => {
       retry: () => briefing(contractId),
       lab: () => openLab(() => { State.screen = 'results'; Screens.show('results'); }),
       map: () => go('map'),
-      card: (card) => Glossary.show({ card }, () => { State.screen = 'results'; Screens.show('results'); })
+      card: (card) => Glossary.show({ card }, () => { State.screen = 'results'; Screens.show('results'); }),
+      finale: () => { State.screen = 'end'; EndCard.show({ hard: () => { setDifficulty('hard'); go('map'); }, map: () => go('map'), start: () => go('start') }); }
     });
   }
 
   // ---------- the cheat sheet ----------
   function openGlossary(opts, back) {
+    if (demoOn()) leavePlay();
     if (!playing()) State.screen = 'glossary';
     Glossary.show(opts, back);
   }
   // from play (a second tap on a metric bar): the game pauses under the card; Back plays on
   function cardFromPlay(metric) {
-    const card = Glossary.cardOfMetric(metric);
+    const card = metric.startsWith('G-') ? metric : Glossary.cardOfMetric(metric);
     if (!card || !playing()) return;
     State.paused = true;
     $('tip').hidden = true;
@@ -139,7 +167,7 @@ const Game = (() => {
   function saveSandbox() {
     const run = State.run;
     if (!run || run.kind !== 'sandbox') return;
-    const json = JSON.stringify(Object.assign({}, run.knobs, { threshold: State.threshold }, State.review ? { reviewLow: State.review.low } : {}));
+    const json = JSON.stringify(Object.assign({}, run.knobs, { threshold: State.threshold, k: State.k }, State.review ? { reviewLow: State.review.low } : {}));
     if (json === savedKnobs) return;
     savedKnobs = json;
     Store.set('sandbox.v1', json);
@@ -151,8 +179,8 @@ const Game = (() => {
     showPlay(true);
     Hud.reset();
     LivePanel.reset();
-    Charts.showProfit(true);
-    Charts.showCalib(true);
+    Charts.showProfit(!State.run.topk);
+    Charts.showCalib(!State.run.topk);
     SandboxPanel.show(knobChanged);
     lastLayout = null;
     SandboxPanel.setOpen(Render.layoutName() === 'desktop');
@@ -160,7 +188,8 @@ const Game = (() => {
   }
 
   function knobChanged(what) {
-    if (what === 'panel' || what === 'review') applyLayout();
+    if (what === 'scenario') { Charts.showProfit(!State.run.topk); Charts.showCalib(!State.run.topk); }
+    if (what === 'panel' || what === 'review' || what === 'scenario') applyLayout();
     saveSandbox();
     LivePanel.update(true);
     Charts.update(true);
@@ -169,7 +198,7 @@ const Game = (() => {
   // ---------- layout: the class on #play picks the grid (styles.css); then the canvases take their sizes ----------
   let lastLayout = null;
   function applyLayout() {
-    if (!playing() || !State.run) return;
+    if (!onBelt() || !State.run) return;
     const name = Render.layoutName();
     const play = $('play');
     const sandbox = State.run.kind === 'sandbox';
@@ -179,7 +208,7 @@ const Game = (() => {
     play.classList.remove('desktop', 'landscape', 'portrait');
     play.classList.add(name);
     play.classList.toggle('docked', sandbox && name === 'desktop' && SandboxPanel.isOpen());
-    play.classList.toggle('contract', !sandbox);
+    play.classList.toggle('contract', !sandbox && !demoOn());
     // the charts sit in one row when each gets at least CHART_MIN_PX, otherwise one at a time under tabs
     play.classList.remove('tabbed');
     const count = document.querySelectorAll('#chartsBox .chart:not([hidden])').length;
@@ -278,6 +307,10 @@ const Game = (() => {
     const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
     last = now;
     const run = State.run;
+    if (demoOn()) {   // the attract demo behind the start screen: no input, no saving
+      if (!demoResting() && !document.hidden) { Demo.update(dt); Render.frame(dt); LivePanel.update(); Charts.update(); }
+      return;
+    }
     if (!playing() || !run) return;
     if (!State.paused) {
       if (run.kind === 'sandbox') { if (!run.frozen) { Stream.update(dt * run.knobs.speed); Review.update(); } }
@@ -345,9 +378,15 @@ const Game = (() => {
     });
     Input.bindPlay($('beltCanvas'), {
       active: () => playing() && !State.paused && !!State.run,
-      threshold: () => State.threshold,
+      // in a top-k run the line value is k's (Topk.valueOfK / kOfValue): dragging up shows fewer documents
+      threshold: () => (State.run && State.run.topk ? Topk.valueOfK(State.k) : State.threshold),
       // the review band can never sit above the threshold: lowering the line pushes its edge down too
-      setThreshold: (t) => { State.threshold = t; if (State.review && State.review.low > t) State.review.low = t; },
+      setThreshold: (t) => {
+        if (State.run && State.run.topk) { State.k = Topk.kOfValue(t); return; }
+        State.threshold = t;
+        if (State.review && State.review.low > t) State.review.low = t;
+      },
+      unit: () => (State.run && State.run.topk ? Topk.STEP_UNIT : 1),
       onHandle: Render.onHandle,
       onPlayArea: Render.onPlayArea,
       valueAt: Render.valueAt,
@@ -372,7 +411,7 @@ const Game = (() => {
       const esc = e.key === 'Escape';
       if (panel === 'pause' && (esc || e.code === 'KeyP')) { e.preventDefault(); resume(); return; }
       if (!esc) return;
-      const backs = { placeholder: 'backBtn', confirm: 'confirmNo', map: 'mapBackBtn', briefing: 'briefBackBtn', results: 'resMapBtn', lab: 'labBackBtn' };
+      const backs = { placeholder: 'backBtn', confirm: 'confirmNo', map: 'mapBackBtn', briefing: 'briefBackBtn', results: 'resMapBtn', lab: 'labBackBtn', end: 'endMapBtn' };
       if (panel === 'glossary') { e.preventDefault(); Glossary.goBack(); }
       else if (backs[panel]) { e.preventDefault(); $(backs[panel]).click(); }
     });
@@ -383,6 +422,9 @@ const Game = (() => {
     // the stage can change size without the window (the docked knobs, the live panel's rows)
     if (window.ResizeObserver) new ResizeObserver(queueLayout).observe($('stage'));
     window.addEventListener('orientationchange', queueLayout);
+    if (reducedQuery && reducedQuery.addEventListener) {
+      reducedQuery.addEventListener('change', () => { if (State.screen === 'start') { if (reducedQuery.matches) leavePlay(); else startDemo(); } });
+    }
 
     go('start');
     requestAnimationFrame(tick);

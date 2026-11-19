@@ -5,7 +5,7 @@
 // they point at, with the stream paused until the player does what they ask. C01 is the tutorial; later
 // contracts get one or two marks the first time they bring something new (the goal chip C02, the outbreak
 // meter C03, F1 C04, amounts C05, accuracy C06, the base rate shift C07, the review band C08, the drift
-// monitor C09). Seen marks are remembered in the campaign; C01 always shows its own.
+// monitor C09, the fraud ring C10, top-k C11, the phases C12). Seen marks are remembered in the campaign; C01 always shows its own.
 //   when:   'start' (the contract begins), 'arrive' (the first item is on the belt), 'after:<id>' (right after
 //           that mark), 'outcome:FP' (the first item decided that way), 'count:<n>' (n items decided),
 //           'incident' (the contract's first incident has started), 'alert' (the drift monitor's alert)
@@ -13,7 +13,7 @@
 //           { cell: 'FP' } (a matrix cell), { bar: 'f1' } (a metric bar), { band: true } (the review
 //           band's handle), { el: '#id' } (any element)
 //   until:  'tap' (the bubble's button, Space or Enter), 'drag' (the threshold moves)
-//   params: names of live values filled into the text ({allowance}, {target}, {desk}, {window})
+//   params: names of live values filled into the text ({allowance}, {target}, {desk}, {window}, {lag}, {docs})
 // Plain data, no logic; the texts are the English source and go through tr() where they are shown.
 // Used by ui/coach.js.
 // ============================================================
@@ -57,5 +57,15 @@ const COACH = [
   { id: 'c09-psi', contract: 'C09', when: 'start', target: { el: '#hudPsi' }, until: 'tap', params: ['window'],
     text: 'The **drift monitor**: PSI compares the scores of the last {window} letters with the validation set the model was tested on. Below 0.1 all is calm; above 0.2 the inputs have changed.' },
   { id: 'c09-alert', contract: 'C09', when: 'alert', target: { el: '#retrainBtn' }, until: 'tap',
-    text: 'The alert: the scores no longer look like the test data. The dashed curves show how the model does on the recent letters — worse than it thinks. **Retrain** it: it takes 15 seconds, and it works once.' }
+    text: 'The alert: the scores no longer look like the test data. The dashed curves show how the model does on the recent letters — worse than it thinks. **Retrain** it: it takes 15 seconds, and it works once.' },
+
+  // ---------- Act 3 ----------
+  { id: 'c10-ring', contract: 'C10', when: 'incident', target: { handle: true }, until: 'tap', params: ['lag'],
+    text: 'The fraud ring watches your line: each of their payments is made to score just under where it stood {lag} seconds ago. A line that stays put lets them all through. **Move it**, or check the zone below it.' },
+  { id: 'c11-k', contract: 'C11', when: 'arrive', target: { handle: true }, until: 'tap', params: ['docs'],
+    text: 'Each column is one search query: {docs} pages at the height of their score. The knob is **k**: the k best pages of every query go to the language model. Drag it, or press ↑ / ↓.' },
+  { id: 'c11-line', contract: 'C11', when: 'after:c11-k', target: { item: 'first' }, until: 'tap',
+    text: 'See the line jump from column to column: top-k is a **threshold per query**, between the k-th and the next page. **Precision@k**: how many of the k pages were relevant. **Recall@k**: how many of the relevant pages made it into the k.' },
+  { id: 'c12-phases', contract: 'C12', when: 'start', target: { el: '#hudTitle' }, until: 'tap',
+    text: 'Three clients in a row, 120 items each: spam with a precision goal, the fever gate with a recall goal, then payments where only money counts. Each client changes its prices halfway: watch the banners and move the line.' }
 ];

@@ -190,3 +190,91 @@ test('the cheat I starts the next incident with the next item; the arrivals befo
   assert.ok(share > 0.12, 'the new base rate from the next items on: ' + share.toFixed(2));
   assert.equal(L.Incidents.startNow(run), null, 'C07 has one incident');
 });
+
+// ---------- the adversary (02 §6.3, ADR-0006) ----------
+
+test('the adversary: a share of the positives from the incident on is crafted, decided in advance from the seed', () => {
+  const L = load();
+  const def = L.CONTRACTS.C10;
+  const at = def.incidents[0].at;
+  const items = L.Contract.streamOf(def, 'medium', 41);
+  const again = L.Contract.streamOf(def, 'medium', 41);
+  assert.deepEqual(Array.from(items.map((it) => !!it.crafted)), Array.from(again.map((it) => !!it.crafted)));
+  assert.ok(items.slice(0, at).every((it) => !it.crafted));
+  assert.ok(items.every((it) => !it.crafted || (it.y === 1 && it.craftU >= 0.01 && it.craftU <= L.ADV_MARGIN)));
+  // over many streams about ADV_SHARE of the positives after the ramp are crafted; the ring brings more fraud
+  let pos = 0, crafted = 0, before = 0, nBefore = 0, after = 0, nAfter = 0;
+  for (let s = 0; s < 40; s++) {
+    for (const it of L.Contract.streamOf(def, 'medium', 1000 + s)) {
+      if (it.i < at) { before += it.y; nBefore++; }
+      if (it.i >= at + L.INCIDENT_RAMP) { after += it.y; nAfter++; if (it.y) { pos++; crafted += it.crafted ? 1 : 0; } }
+    }
+  }
+  assert.ok(Math.abs(crafted / pos - L.ADV_SHARE) < 0.05, 'share ' + crafted / pos);
+  assert.ok(Math.abs(before / nBefore - def.prevalence) < 0.015);
+  assert.ok(Math.abs(after / nAfter - def.incidents[0].params.prevalence) < 0.02);
+});
+
+test('a crafted item lands just under the threshold of ADV_LAG_S earlier, on the raw or the calibrated axis', () => {
+  const L = load();
+  const it = { y: 1, crafted: true, craftU: 0.05, s: 0.97 };
+  L.Incidents.craft(it, 0.62, 's', null);
+  assert.equal(it.s, 0.57);
+  assert.ok(!L.atOrAbove(it.s, 0.62));
+  L.Incidents.craft(it, 0.03, 's', null);
+  assert.equal(it.s, L.SCORE_MIN);   // clamped like any score
+  // calibrated: the highest raw score whose p is still under the aim
+  const platt = { a: 1.4, b: -0.7 };
+  const c = { y: 1, crafted: true, craftU: 0.04 };
+  L.Incidents.craft(c, 0.5, 'p', platt);
+  assert.ok(c.p <= 0.46 + 1e-9 && L.Model.calibrate(c.s, platt) === c.p);
+  assert.ok(L.Model.calibrate(L.round2(c.s + 0.01), platt) > 0.46);
+  assert.equal(L.Incidents.craftedValue({ craftU: 0.04 }, 0.5, 'p', platt), c.p);
+  // the threshold log: what the line was at a moment
+  const run = { tLog: [{ at: 0, t: 0.5 }, { at: 10, t: 0.7 }, { at: 20, t: 0.4 }] };
+  assert.equal(L.Incidents.thresholdAt(run, 9.9), 0.5);
+  assert.equal(L.Incidents.thresholdAt(run, 15), 0.7);
+  assert.equal(L.Incidents.thresholdAt(run, 25), 0.4);
+});
+
+test('C10 live: a line held still lets the crafted payments through just under it; a review band below it catches them', () => {
+  const L = load();
+  const def = L.CONTRACTS.C10;
+  // held still at 0.75, the band closed (low = t): every crafted payment that arrived after the first lag is just under the line
+  const still = playLive(L, def, 'medium', 77, 0.75, {}, (run) => { if (L.State.review) L.State.review.low = 0.75; });
+  const sc = still.items.filter((it) => it.crafted && it.outcome);
+  assert.ok(sc.length >= 5, 'crafted ' + sc.length);
+  for (const it of sc) {
+    assert.ok(it.s < 0.75 && it.s >= L.round2(0.75 - L.ADV_MARGIN) - 1e-9, 'score ' + it.s);
+    assert.equal(it.outcome, 'FN');
+  }
+  const r1 = L.Contract.results(still);
+  assert.equal(r1.crafted.total, sc.length);
+  assert.equal(r1.crafted.through, sc.length);
+  // the same stream with the lent desk's band 0.12 under the line: people catch the crafted ones
+  const band = playLive(L, def, 'medium', 77, 0.75, {}, () => { if (L.State.review) L.State.review.low = 0.63; });
+  const r2 = L.Contract.results(band);
+  assert.ok(r2.crafted.reviewed >= r2.crafted.total * 0.7, JSON.stringify(r2.crafted));
+  assert.ok(r2.money > r1.money);
+  // the hindsight-best is aimed at too (ADR-0006): holding still is far from it, the band close to it
+  assert.ok(r1.money < 0.9 * r1.best.money);
+});
+
+test('the hindsight-best against an adversary scores every candidate as if the ring had aimed at it', () => {
+  const L = load();
+  const def = Object.assign({}, L.CONTRACTS.C10, { lend: null });
+  const items = L.Contract.streamOf(def, 'medium', 5);
+  const best = L.Contract.hindsightBest(items, def, 'medium');
+  for (const t of [0.5, 0.7, 0.85]) {
+    const aimed = L.Incidents.craftedAgainst(items, () => t);
+    const r = L.Contract.play(aimed, def, t, 'medium');
+    assert.equal(best.runs[Math.round(t * 100)].money, r.money, 't ' + t);
+  }
+  // with a desk the fast band search agrees with play on the winning pair
+  const desk = { level: 1, travelS: L.BELT_TRAVEL_S };
+  const b2 = L.Contract.hindsightBest(items, def, 'medium', 's', desk);
+  const aimed = L.Incidents.craftedAgainst(items, () => b2.t);
+  const r2 = L.Contract.play(aimed, def, b2.t, 'medium', 's', Object.assign({ low: b2.low }, desk));
+  assert.ok(Math.abs(r2.money - b2.money) < 1e-9);
+  assert.ok(b2.money >= best.money);
+});

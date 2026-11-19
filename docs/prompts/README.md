@@ -57,3 +57,4 @@ Rules:
 | [S04](sessions/2026-11-19_S04_play-screen-sandbox.md) | 2026-11-19 | I03 | Play screen and sandbox: belt, threshold, pile, live panel, charts |
 | [S05](sessions/2026-11-19_S05_campaign-act1.md) | 2026-11-19 | I04 | Campaign Act 1 and the cheat sheet: map, briefing, contracts, results, coach marks, balance check |
 | [S06](sessions/2026-11-19_S06_lab-incidents-act2.md) | 2026-11-19 | I05 | The Lab, incidents, the review desk, the drift monitor, Act 2 (C06–C09) |
+| [S07](sessions/2026-11-19_S07_act3-topk-demo.md) | 2026-11-19 | I06 | Act 3: the fraud ring, top-k search, the big pitch, the end card, the attract demo |

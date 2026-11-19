@@ -6,7 +6,8 @@
 // Space / Enter (from fish-frenzy's core/input.js), the short banner, and the start screen (title,
 // Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, How to play), the pause
 // dialog (01 §12), a confirmation dialog (New campaign) and a placeholder panel for what comes later.
-// The map, the briefing, the results, the Lab and the cheat sheet have files of their own; their panels are listed here.
+// The map, the briefing, the results, the Lab, the cheat sheet and the end card have files of their own; their
+// panels are listed here.
 // Reads State and Campaign; game.js wires the buttons to the flow.
 // ============================================================
 
@@ -16,7 +17,7 @@ const Screens = (() => {
   const panels = {
     start: $('startPanel'), pause: $('pausePanel'), placeholder: $('placeholderPanel'), confirm: $('confirmPanel'),
     map: $('mapPanel'), briefing: $('briefingPanel'), results: $('resultsPanel'), glossary: $('glossaryPanel'),
-    lab: $('labPanel')
+    lab: $('labPanel'), end: $('endPanel')
   };
   let shownName = null;
 

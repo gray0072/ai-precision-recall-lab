@@ -11,7 +11,7 @@
 The game is live on GitHub Pages, installable on a phone, playable in English, Russian and Swedish, with sound, polished icons and three READMEs that sell it and double as a cheat sheet.
 
 ## Tasks
-- [ ] `ui/sounds.js` with every event of 04 §7; the master gain and the switch checked end to end.
+- [ ] `ui/sounds.js` with every event of 04 §7; the master gain and the switch checked end to end. From I06: no sound while `State.run.kind === 'demo'` (the attract demo emits the item events too); a top-k query decides 30 documents at once (one sound per query, not 30); the end card's `fireworkLaunch` / `fireworkBang` (as in `ivan`'s city-builder); a sound for `phaseStarted` (C12).
 - [ ] Russian and Swedish: `data/lang-ru.js`, `data/lang-sv.js` with every key (incl. the `data/` tables: contracts, cards with the local terms of 03 §4, upgrades, questions, coach marks); the language switcher of 04 §8 with `art/flag-gb/ru/se.svg` from `ivan`, remembered as `prLab.lang`; `node tools/i18n-check.js .` clean; the `data/` texts checked by hand; long Russian texts checked on a phone layout. May take its own session.
 - [ ] Final `icon.svg` / `icon-maskable.svg`, PNGs, `?v=N` bumps.
 - [ ] `README.md`, `README_RU.md`, `README_SV.md` (linked to each other at the top): play badge and link, screenshot, what it teaches, how to play (incl. touch controls and difficulty levels), a short metrics cheat sheet (precision, recall, F1, ROC/PR with the mnemonics), how to run locally, tech notes, licence.

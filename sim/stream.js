@@ -146,6 +146,7 @@ const Stream = (() => {
     while (run.next && run.next.at <= run.clock) {
       const item = run.next;
       item.enter = item.at;
+      if (run.onArrive) run.onArrive(item);   // a crafted item gets its score now; a new phase begins (C12)
       State.belt.push(item);
       GameEvents.emit('itemArrived', { item });
       run.next = run.source();
@@ -153,5 +154,11 @@ const Stream = (() => {
     while (!run.ended && State.belt.length && run.clock - State.belt[0].enter >= run.travelS - 1e-9) gate(State.belt.shift());
   }
 
-  return { generate, amount, validation, calibrate, outcome, decide, endless, progress, timeToGate, toPile, gate, update };
+  // what the pile and the live panel show for an item now (the rolling window re-evaluated, 02 §3.4): flagged
+  // at the current threshold, or shown at the current k in a top-k run
+  function flaggedNow(run, it) { return run.topk ? Topk.shown(it, State.k) : atOrAbove(it[run.key], State.threshold); }
+  // the counts of the pile now
+  function windowCounts(run) { return run.topk ? Topk.counts(State.pile, State.k) : Metrics.counts(State.pile, State.threshold, run.key); }
+
+  return { generate, amount, validation, calibrate, outcome, decide, endless, progress, timeToGate, toPile, gate, update, flaggedNow, windowCounts };
 })();

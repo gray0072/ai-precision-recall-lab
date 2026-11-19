@@ -91,6 +91,7 @@ The results screen shows:
   - ★★ — also profit ≥ the contract's `target` (03 §2; one number, or one per level where the streams of one level vary a lot: C08, C09);
   - ★★★ — also profit ≥ `STAR3_SHARE` (90 %) of the hindsight-best profit.
   - A contract with no metric goal (C01, C05, C08, C10) gives ★ for completing it.
+  - A contract made of phases (C12) needs every phase's goal for ★, and its hindsight-best is one threshold per phase (03 §2).
 - Replaying a contract pays its money again (so the Lab can always be reached), but the fee only for more stars than that level's record (the first completion on a level always pays it). A failed contract keeps its own money (usually fines) but pays no fee; quitting from the pause dialog loses the contract and its money. A run with a debug cheat pays only its own money (§14).
 
 ## 5. The Lab (upgrades)
@@ -112,7 +113,7 @@ Incidents change the stream during a contract. Each contract lists its incidents
 |---|---|---|
 | **Base rate shift** ("Flu season!") | The prevalence changes, e.g. 4 % → 20 %. The model and the scores per class stay the same. | At the same threshold recall and FPR stay put, **precision jumps**; a calibrated model becomes stale. |
 | **Drift** ("Spam wave!") | Positives start to look more like negatives: their score distribution slides down, `d'` falls. | The ROC curve sags; the old threshold now misses a lot; monitor and retrain. |
-| **Adversary** ("Fraud ring!") | A share of positives is *crafted* to land just below the threshold the player used `ADV_LAG_S` seconds ago. | A fixed, known threshold gets gamed; the review band and moving the line break the pattern. |
+| **Adversary** ("Fraud ring!") | A share of positives is *crafted* to land just below the threshold the player used `ADV_LAG_S` seconds ago; the ring may also bring more positives (C10: 4 % → 12 %). On Easy a ✦ marks a crafted item after its reveal; the results count them. | A fixed, known threshold gets gamed; the review band and moving the line break the pattern. The best fixed line in hindsight is aimed at too (02 §5.2). |
 | **Price change** ("New SLA from the client") | The price list changes mid-contract (e.g. FN cost × 3). | The best threshold depends on costs, not on the model. |
 | **Rush hour** | The arrival rate doubles for a while. | Review capacity runs out; decisions fall back on the threshold. |
 
@@ -120,13 +121,13 @@ Incidents change the stream during a contract. Each contract lists its incidents
 
 The sandbox is the play screen without money, goals or a fixed length. A side panel (a drawer on phones) has:
 
-- **Scenario** picker (the drawings and names of the scenarios) — or "Abstract" (dots instead of drawings). A scenario sets the base rate and `d'` to its own (03 §1) and brings its temperament `γ`, `β`. Search Ranker joins with the Top-k mode (I06).
+- **Scenario** picker (the drawings and names of the scenarios) — or "Abstract" (dots instead of drawings). A scenario sets the base rate and `d'` to its own (03 §1) and brings its temperament `γ`, `β`. Search Ranker is the Top-k mode.
 - **Base rate** (prevalence) 0.5 %–50 %, logarithmic slider.
 - **Separation** `d'` 0–4 (with the AUC it gives shown next to it).
 - **Calibrated scores** on/off: the heights, the badges and the threshold become the calibrated `p` (Platt scaling fitted on the validation set, 02 §2.3), and the cost-optimal **ghost line** `p*` for the sandbox's prices appears (02 §5.1; a raw score is not a probability, so without calibration there is no ghost line, only the profit curve's best). Switching it keeps the line at the same items: the threshold's number moves to the other axis. **Show true class on the belt** on/off.
 - **Speed** 0.25× / 0.5× / 1× / 2× / 4× (scales the run's time), **Pause belt** and **Step** (ride until the next item has been decided).
 - **Prices per item** for TP / FP / FN / TN (whole dollars, −20 … +20, default +1 / −1 / −1 / 0): the profit curve and the ghost line use them; the panel names the cost-optimal `p*`.
-- **Review band** on/off; **Top-k mode** on/off (02 §7).
+- **Review band** on/off; **Top-k mode** on/off (02 §7): the Search Ranker scenario (the toggle and its picker button are the same thing). The stream comes in queries of 30 pages (one every 2.5 s at ×1), the handle sets k (remembered with the knobs), the window holds 20 queries, the bars are P@k and R@k, the charts are over k; base rate, calibration and the review band do not apply and are disabled; there is no profit or calibration chart. Switching the mode starts the belt and the pile afresh; Generate makes whole queries.
 - **Generate 1 000 at once**: fills the pile instantly (the pile window grows to 1 000 for this), so the humps and the curves are smooth; **Clear**.
 - **Formula view** toggle: every metric bar shows its formula with the live numbers all the time, not only on hover.
 
@@ -138,7 +139,7 @@ Reachable from the start screen, the map, the pause dialog and by tapping/clicki
 
 ## 9. Attract demo
 
-Behind the start screen (dimmed, under the menu panel) the belt and the pile run in the Abstract scenario with a bot that sweeps the threshold slowly up and down (`DEMO_SWEEP_S`, a full sweep every 20 s), with the ROC and PR dots sliding. It is pure decoration: no sound, no saving, paused while the menu panel is scrolled on a phone to save battery, off with `prefers-reduced-motion`.
+Behind the start screen (dimmed, under the menu panel) the belt and the pile run in the Abstract scenario (`sim/demo.js`: a sandbox run with the default knobs, `DEMO_PREFILL` items on the pile at once) with a bot that sweeps the threshold slowly up and down between 0.15 and 0.85 (`DEMO_SWEEP_S`, a full sweep every 20 s), so the matrix, the bars and the ROC and PR dots move by themselves. It is pure decoration: no HUD, no input, no sound, no saving; paused while the page is hidden, while another panel covers the start screen, and while the start panel is scrolled on a phone (battery); off with `prefers-reduced-motion` (and switched on or off when that setting changes). It stops when the start screen closes.
 
 ## 10. Difficulty
 

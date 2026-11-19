@@ -9,7 +9,10 @@
 // of the denominator outlined — and shows its formula filled with the live numbers. Formula view (sandbox)
 // shows the filled formula under every bar all the time. In a contract the goal's bar carries a tick at the
 // target and turns red while the window is below it; a second tap / click on a pinned bar opens its cheat sheet
-// card (onCard, set by game.js). Every number here can be traced to the pile.
+// card (onCard, set by game.js). A top-k run (02 §7) shows two bars instead: P@k (the mean over the window's
+// queries, which equals the pooled TP / (TP + FP) since every query shows k) and R@k (the mean of each
+// query's TP / (TP + FN), next to the pooled value in its tooltip); the matrix counts the documents at the
+// current k. Every number here can be traced to the pile.
 // Reads State, sets State.highlight; updated by game.js each frame (it redraws only when something changed).
 // ============================================================
 
@@ -51,8 +54,17 @@ const LivePanel = (() => {
       empty: () => tr('not defined yet: no items') },
     { id: 'fpr', name: 'FPR', formula: 'FP / (FP + TN)', num: ['FP'], den: ['FP', 'TN'],
       ask: () => tr('False positive rate: of all the real negatives, how many raised a false alarm?'),
-      empty: () => tr('not defined yet: no negatives') }
+      empty: () => tr('not defined yet: no negatives') },
+    // top-k (02 §7): the means over the queries of the window
+    { id: 'patk', name: 'P@k', formula: 'TP / (TP + FP)', num: ['TP'], den: ['TP', 'FP'], topk: true, card: 'G-topk',
+      ask: () => tr('Precision@k: of the k pages shown for a query, how many were relevant — the mean over the queries. Every query shows k pages, so it equals the pooled TP / (TP + FP).'),
+      empty: () => tr('not defined yet: no queries') },
+    { id: 'ratk', name: 'R@k', formula: 'TP / (TP + FN)', num: ['TP'], den: ['TP', 'FN'], topk: true, card: 'G-topk', perQuery: true,
+      ask: () => tr('Recall@k: of the relevant pages of a query, how many made it into the k shown — the mean over the queries.'),
+      empty: () => tr('not defined yet: no queries') }
   ];
+  // the goal metric of a contract → its bar
+  const GOAL_BAR = { recallAtK: 'ratk', precisionAtK: 'patk' };
   const byId = {};
   METRICS.forEach((m) => { byId[m.id] = m; });
 
@@ -74,7 +86,7 @@ const LivePanel = (() => {
     row.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !pinned) point(null); });
     row.addEventListener('click', () => {
       // a second click / tap on the same bar lets go of it and opens the metric's cheat sheet card
-      if (pinned === m.id) { pinned = null; point(null); api.onCard(m.id); return; }
+      if (pinned === m.id) { pinned = null; point(null); api.onCard(m.card || m.id); return; }
       pinned = m.id;
       point(m.id);
     });
@@ -95,6 +107,12 @@ const LivePanel = (() => {
     });
   }
   function filledHtml(m, c, v) {
+    if (m.perQuery) {   // R@k: a mean of per-query ratios; the pooled ratio of the window for comparison
+      const pooled = Metrics.compute(c).recall;
+      return '<b>' + m.name + '</b> = ' + tr('mean over {n} queries of', { n: last ? last.queries : 0 }) + ' ' + formulaHtml(m) +
+        ' = <b class="num">' + (v === null ? '—' : v.toFixed(2)) + '</b> <span class="fine">(' + tr('pooled') + ' ' + formulaHtml(m, c) +
+        ' = ' + (pooled === null ? '—' : pooled.toFixed(2)) + ')</span>';
+    }
     return '<b>' + m.name + '</b> = ' + formulaHtml(m) + ' = ' + formulaHtml(m, c) + ' = <b class="num">' +
       (v === null ? '—' : v.toFixed(2)) + '</b>';
   }
@@ -122,7 +140,9 @@ const LivePanel = (() => {
     tip.innerHTML = '<div class="tipF">' + filledHtml(m, last.c, v) + '</div>' +
       '<div class="tipAsk"></div><div class="tipNote fine"></div>';
     tip.querySelector('.tipAsk').textContent = v === null ? m.empty() : m.ask();
-    tip.querySelector('.tipNote').textContent = tr('Last {n} items, at the current threshold.', { n: last.n });
+    tip.querySelector('.tipNote').textContent = last.topk
+      ? tr('Last {q} queries ({n} documents), at the current k.', { q: last.queries, n: last.n })
+      : tr('Last {n} items, at the current threshold.', { n: last.n });
   }
 
   // the tooltip next to the bar, kept on screen
@@ -151,27 +171,40 @@ const LivePanel = (() => {
     const run = State.run;
     if (!run) return;
     const goal = run.kind === 'contract' && run.goal ? run.goal : null;
-    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + run.count + '|' + !!(run.knobs && run.knobs.formulas) + '|' + (goal ? goal.metric : '');
+    const topk = !!run.topk;
+    const k = State.threshold + '|' + State.k + '|' + topk + '|' + State.pileVersion + '|' + run.key + '|' + run.count + '|' + !!(run.knobs && run.knobs.formulas) + '|' + (goal ? goal.metric : '');
     if (k === key && !force) return;
     key = k;
-    const c = Metrics.counts(State.pile, State.threshold, run.key);
+    const c = Stream.windowCounts(run);
     const metrics = Metrics.compute(c);
-    last = { c, totals: run.totals, metrics, n: State.pile.length };
+    let queries = 0;
+    if (topk) {
+      const q = Topk.summary(State.pile, State.k);
+      metrics.patk = q.pAtK;
+      metrics.ratk = q.rAtK;
+      queries = q.queries;
+    }
+    last = { c, totals: run.totals, metrics, n: State.pile.length, topk, queries };
     for (const o in cells) {
       cellNums[o].win.textContent = c[o];
       cellNums[o].all.textContent = tr('all {n}', { n: run.totals[o] });
-      cells[o].title = CELL_TEXT[o]() + ' ' + tr('{w} in the last {n} items at the current threshold; {a} decided this way since the start.',
-        { w: c[o], n: last.n, a: run.totals[o] });
+      cells[o].title = CELL_TEXT[o]() + ' ' + (topk
+        ? tr('{w} in the last {n} documents at the current k; {a} decided this way since the start.', { w: c[o], n: last.n, a: run.totals[o] })
+        : tr('{w} in the last {n} items at the current threshold; {a} decided this way since the start.', { w: c[o], n: last.n, a: run.totals[o] }));
     }
-    $('matrixNote').textContent = tr('last {n}', { n: last.n });
+    $('matrixNote').textContent = topk ? tr('last {q} queries', { q: queries }) : tr('last {n}', { n: last.n });
     const formulas = !!(run.knobs && run.knobs.formulas);
     barsBox.classList.toggle('formulas', formulas);
+    const goalBar = goal ? GOAL_BAR[goal.metric] || goal.metric : null;
     for (const m of METRICS) {
-      const v = metrics[m.id], r = rows[m.id];
+      const r = rows[m.id];
+      r.row.hidden = !!m.topk !== topk;
+      if (r.row.hidden) continue;
+      const v = metrics[m.id];
       r.fill.style.width = v === null ? '0%' : (v * 100).toFixed(1) + '%';
       r.val.textContent = fmt(v);
       r.row.title = v === null ? m.empty() : '';
-      const target = goal && goal.metric === m.id ? run.goalTarget : null;
+      const target = goalBar === m.id ? run.goalTarget : null;
       r.tick.hidden = target === null;
       if (target !== null) {
         r.tick.style.left = (target * 100).toFixed(1) + '%';
@@ -179,7 +212,7 @@ const LivePanel = (() => {
       }
       r.row.classList.toggle('goal', target !== null);
       r.row.classList.toggle('broken', target !== null && v !== null && v < target - 1e-12);
-      if (formulas) r.formula.innerHTML = formulaHtml(m, c) + ' = ' + fmt(v);
+      if (formulas) r.formula.innerHTML = (m.perQuery ? tr('mean per query') + ' ' + formulaHtml(m) : formulaHtml(m, c)) + ' = ' + fmt(v);
     }
     if (pointed) fillTip();
   }

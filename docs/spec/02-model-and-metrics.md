@@ -108,8 +108,9 @@ Example (C02): `V = +3 / −10 / 0 / 0` → `p* = 10 / (3 + 10) = 0.77`. This is
 On the results screen, over the contract's actual items (scores, classes, amounts, arrival times as they happened): for every `t` in 0.00…1.00 the money the contract would have made with that threshold held fixed the whole time, keeping only thresholds that meet the goal and do not fail the contract (outbreak allowance). The best of them is the **hindsight-best threshold**, used for ★★★ (01 §4) and the results' comparison.
 
 - With a review band, the search is over pairs (`t_review`, `t`) with `t_review ≤ t`, simulating the desk's queue and capacity on the gate times (arrival + ride); the desk of sim/review.js is the same one the live run uses. About 5 000 pairs × ≤ 400 items: each item is prepared once as integers (its score in hundredths, its class, its gate time, the cents of each outcome) and every pair is a plain loop; `play()` makes the winner's full result, and a test checks that the two agree. Among pairs with the same money the narrowest band wins. A reviewed item counts as TP or TN and costs `REVIEW_FEE`.
-- With top-k (§7), the search is over `k`.
-- Adversarial items keep the scores they spawned with (a fixed threshold in hindsight would have been gamed differently; the results note this).
+- With top-k (§7), the search is over `k` (1 … 30); ties go to the smaller k.
+- **Against an adversary** (§6.3) every candidate is scored as if the ring had aimed at it: for a fixed threshold t (and each band pair) the crafted items get `t − u` instead of the score they spawned with ([ADR-0006](../adr/0006-adversary-aims-at-the-hindsight.md)). A fixed, known line would have been gamed too; on the spawned scores the search would be an oracle that knows where the attacker aimed. The results say so.
+- A contract made of phases (C12) has one hindsight-best threshold (and band) per phase, each over its phase's own items with its phase's terms; their money adds up (03 §2).
 - If no threshold meets the goal, the results say *"No fixed threshold could meet the goal on this stream: the model is not good enough. Visit the Lab."* and ★★★ is out of reach for this attempt.
 
 ## 6. Incidents
@@ -128,7 +129,9 @@ Incidents are listed per contract in 03 §2 as `{ at: <item index>, kind, params
 
 ### 6.3 Adversary
 
-From the incident on, a share `ADV_SHARE` (0.4) of the positives are **crafted**: when such an item spawns, its score is set to `t_lag − u`, where `t_lag` is the threshold the player had `ADV_LAG_S` (8 s) earlier and `u` is uniform in [0.01, `ADV_MARGIN` = 0.08], rounded and clamped like any score. Crafted items look like any other on the belt (on Easy, a tiny ✦ gives them away after the reveal). They land just under a threshold that has stayed still, so a threshold that moves (or a review band below it, which humans check) defeats them. The results show how many crafted items got through.
+From the incident on, a share `ADV_SHARE` (0.4) of the positives are **crafted** (ramping in over the incident's ramp). Which ones, and each one's margin `u` (uniform in [0.01, `ADV_MARGIN` = 0.08]), is drawn in advance from the attempt seed on a stream of its own (`incidents.adversary`, two draws per item). When a crafted item arrives on the belt, its score is set to `t_lag − u`, rounded and clamped like any score, where `t_lag` is the threshold the player had `ADV_LAG_S` (8 s) earlier (the run keeps a log of its threshold). With calibration the aim is on the p axis: the item gets the highest raw score whose calibrated p is still under `t_lag − u`. With `params.prevalence` the incident also shifts the base rate like §6.1 (C10: the ring brings more fraud, 4 % → 12 %).
+
+Crafted items look like any other on the belt (on Easy, a tiny ✦ gives them away after the reveal). They land just under a threshold that has stayed still, so a threshold that moves, or a review band below it (people check it), defeats them. The results count the crafted items: how many got through, were caught by the line, were caught by people. The hindsight-best is aimed at too (§5.2, ADR-0006).
 
 ### 6.4 Price change and rush hour
 
@@ -139,9 +142,12 @@ From the incident on, a share `ADV_SHARE` (0.4) of the positives are **crafted**
 
 Used by C11 and the sandbox's Top-k mode.
 
-- The stream comes in **queries**. A query is a batch of `TOPK_DOCS` (30) documents, of which `R` (uniform 2–8) are relevant (positives); scores from the binormal model with the scenario's `d'`. A query rides the belt as one column (a "results page"), the documents at their score heights.
-- The knob is **k** (1–30) instead of `t`: the top-k documents of each query are "shown to the user" (flagged). On the belt the threshold line becomes **per query**: it sits between the k-th and the (k+1)-th score of each column, so it jumps from column to column. That is the lesson: top-k is a threshold that adapts to each query.
-- Per query: `Precision@k = relevant in top-k / k`, `Recall@k = relevant in top-k / R`; the panel shows their means over the rolling window of queries (the last 20) and over the contract. The pile shows documents by score as usual, coloured by whether they were in their query's top-k.
+- The stream comes in **queries**. A query is a batch of `TOPK_DOCS` (30) documents, of which `R` (uniform `TOPK_RELEVANT` 2–8) are relevant (positives); scores from the binormal model with the scenario's `d'` (sub-streams `items.classes`, `items.scores`; the validation set is ⌈`N_VAL` / 30⌉ queries). Queries arrive one every 1 / rate seconds (C11: 4 s at ×1), not as a Poisson process, so the columns never overlap. A query rides the belt as one column (a "results page"), the documents at their score heights, spread over five lanes by rank.
+- A document's **rank** in its query is fixed when the query is made: by the model's exact score `z`, highest first. The rounded badges may tie, `z` never does, so "shown at k" is simply `rank < k`, deterministic, and the same in the live run, the window and the hindsight search.
+- The knob is **k** (1–30, `TOPK_K_DEFAULT` 5) instead of `t`: the top-k documents of each query are "shown to the user" (flagged), decided at the gate with the k of that moment (the whole query at once). On the belt the line becomes **per query**: a short cut between the k-th and the (k+1)-th score of each column, the cuts joined by a faint dashed line, so it jumps from column to column. That is the lesson: top-k is a threshold that adapts to each query. The handle reads "k = 5"; its height is `1 − k / 30`, so dragging up shows fewer documents and one key step is one document.
+- Per query: `Precision@k = relevant in top-k / k`, `Recall@k = relevant in top-k / R`. The panel shows their **means over the queries** of the rolling window (the last `TOPK_WINDOW` = 20 queries, re-evaluated at the current k) and the goal uses the mean over the contract's queries. Since every query shows k documents, mean P@k equals the pooled TP / (TP + FP) of the window; mean R@k is not the pooled recall (R differs per query), and its tooltip shows both. The matrix counts documents at the current k. The pile shows documents by score as usual, coloured by whether they are in their query's top-k now; no region names (there is no one line).
+- The model curves are **over k** on the validation queries: ROC through the pooled (FPR, TPR) at k = 0 … 30 (its area is printed, not the threshold AUC), and the mean P@k against mean R@k; the dot sits at the current k, the ring is the window at the same k. There is no profit curve, ghost line, calibration (it changes no ranking), review band or drift monitor in a top-k run.
+- The goal chip stays grey for the first `TOPK_GOAL_GRACE` (3) queries. The results show k per query, the money at every fixed k and the best fixed k (§5.2).
 - The cheat sheet card G-topk ties it to RAG: the retriever's k trades recall (the answer misses facts) against precision (the LLM drowns in noise, and every extra chunk costs tokens).
 
 ## 8. Constants (starting values)
@@ -165,7 +171,9 @@ Used by C11 and the sandbox's Top-k mode.
 | `QUIZ_BONUS` | $50 | right answer in a briefing |
 | `STAR3_SHARE` | 0.9 | share of the hindsight-best profit for ★★★ |
 | `TOPK_DOCS` | 30 | documents per query |
-| `DEMO_SWEEP_S` | 20 | attract demo: seconds per full threshold sweep |
+| `TOPK_RELEVANT` / `TOPK_WINDOW` / `TOPK_K_DEFAULT` / `TOPK_GOAL_GRACE` | 2–8 / 20 / 5 / 3 | relevant documents per query; queries in the window; k at the start; queries before the goal chip shows a colour |
+| `PHASE_GAP_S` | 3 | C12: seconds of empty belt between two phases |
+| `DEMO_SWEEP_S` / `DEMO_T_LOW` / `DEMO_T_HIGH` / `DEMO_PREFILL` | 20 / 0.15 / 0.85 / 160 | attract demo: seconds per full threshold sweep, its two ends, items on the pile at the start |
 | `SCORE_MIN` / `SCORE_MAX` | 0.01 / 0.99 | the clamps of scores and calibrated `p` (§2.1) |
 | `PLATT_MAX_ITER` / `PLATT_TOL` | 25 / 1e−9 | Platt scaling's Newton steps and stopping step size (§2.3) |
 | `RELIABILITY_BINS` | 10 | bins of the reliability diagram (§2.3) |

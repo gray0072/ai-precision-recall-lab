@@ -7,6 +7,9 @@
 //   drift       { shift }        the positives' mean logit slides down by `shift` (d' falls to d' − shift)
 //   priceChange { prices }       from `at` on the contract pays this price list (the ghost line moves)
 //   rush        { rate, items }  the arrival rate × `rate` for `items` items
+//   adversary   { share?, prevalence? }  a share (ADV_SHARE) of the positives is crafted: each one's score is set
+//                                as it arrives, just under the threshold of ADV_LAG_S seconds earlier (02 §6.3);
+//                                with `prevalence` the ring also brings more positives (a base rate shift)
 // baseRate and drift ramp in linearly over `ramp` items (INCIDENT_RAMP). The stream is made in advance, so
 // the schedule (item index → base rate, drift, rate factor) goes into Stream.generate; an incident starts
 // when its first item arrives on the belt (incidentStarted), with a warning warnS seconds ahead on Easy and
@@ -15,8 +18,10 @@
 // alert after PSI_PERSIST decisions in a row above PSI_ALERT (driftAlert). Retrain (once per contract) takes
 // RETRAIN_S: then the items still to come are scored by a model that knows the new data (no drift), a new
 // validation set with the current base rate replaces the old one, the curves and the calibration are refitted
-// and the PSI starts again against the new reference (retrainDone). The debug cheat I starts the next
-// incident now. No drawing, no DOM, no sound. Used by sim/contract.js, game.js, the HUD, the tests.
+// and the PSI starts again against the new reference (retrainDone). The adversary: which positives are
+// crafted (and their margins) is decided in advance from the attempt seed (markCrafted, in Contract.streamOf);
+// the run keeps a log of its threshold, and a crafted item's score is set when it arrives (onArrive): the
+// threshold of ADV_LAG_S earlier minus its margin. The debug cheat I starts the next incident now. No drawing, no DOM, no sound. Used by sim/contract.js, game.js, the HUD, the tests.
 // ============================================================
 
 const Incidents = (() => {
@@ -35,7 +40,9 @@ const Incidents = (() => {
       let prevalence = base, drift = 0, rate = 1;
       for (const inc of incs) {
         const f = rampAt(inc, i);
-        if (inc.kind === 'baseRate') prevalence = lerp(prevalence, inc.params.prevalence, f);
+        if (inc.kind === 'baseRate' || (inc.kind === 'adversary' && inc.params && inc.params.prevalence !== undefined)) {
+          prevalence = lerp(prevalence, inc.params.prevalence, f);
+        }
         else if (inc.kind === 'drift' && i < noDriftFrom) drift += inc.params.shift * f;
         else if (inc.kind === 'rush' && i >= inc.at && i < inc.at + inc.params.items) rate *= inc.params.rate;
       }
@@ -43,13 +50,131 @@ const Incidents = (() => {
     };
   }
 
-  // the price list in force for item i: the latest price change at or before it, else the contract's own
+  // the phase of item i in a contract made of phases (C12): { p, start, end, phase }; null without phases
+  function phaseAt(def, i) {
+    if (!def.phases) return null;
+    let start = 0;
+    for (let p = 0; p < def.phases.length; p++) {
+      const end = start + def.phases[p].items;
+      if (i < end || p === def.phases.length - 1) return { p, start, end, phase: def.phases[p] };
+      start = end;
+    }
+    return null;
+  }
+
+  // the price list in force for item i: the latest price change at or before it (within its phase), else the
+  // contract's own (or its phase's)
   function pricesAt(def, i, list) {
-    let prices = def.prices, at = -1;
+    const ph = phaseAt(def, i);
+    let prices = ph ? ph.phase.prices : def.prices, at = ph ? ph.start - 1 : -1;
     for (const inc of list || def.incidents || []) {
       if (inc.kind === 'priceChange' && inc.at <= i && inc.at > at) { prices = inc.params.prices; at = inc.at; }
     }
     return prices;
+  }
+
+  // ---------- the adversary (02 §6.3) ----------
+
+  // Which positives are crafted, decided in advance from the attempt seed on a stream of its own (two draws
+  // per item, so the marks never shift): from the incident on, a share ADV_SHARE of the positives (ramping in
+  // over the incident's ramp), each with its margin u, uniform in [0.01, ADV_MARGIN]. Returns the same array.
+  function markCrafted(items, list, seed) {
+    const adv = (list || []).filter((inc) => inc.kind === 'adversary');
+    if (!adv.length) return items;
+    const rng = Rng.stream(seed, 'incidents.adversary');
+    for (const it of items) {
+      const a = rng.uniform(), b = rng.uniform();
+      it.crafted = false;
+      if (!it.y) continue;
+      let share = 0;
+      for (const inc of adv) {
+        const s = inc.params && inc.params.share !== undefined ? inc.params.share : ADV_SHARE;
+        share = Math.max(share, s * rampAt(inc, it.i));
+      }
+      if (a < share) { it.crafted = true; it.craftU = 0.01 + b * (ADV_MARGIN - 0.01); }
+    }
+    return items;
+  }
+
+  // where a crafted item aims (in hundredths): just under the threshold t by its margin u, rounded and clamped
+  // like any score
+  function aimH(t, u) { return clamp(Math.round((t - u) * 100), hundredths(SCORE_MIN), hundredths(SCORE_MAX)); }
+
+  // The crafted item's raw score and calibrated p (in hundredths) for each aim 0 … 100 on the threshold's axis:
+  // on the raw axis the aim itself; with calibration the highest raw score whose p is still under the aim (so
+  // it passes). Cached per Platt fit.
+  const tables = new WeakMap();
+  const RAW_TABLE = (() => {
+    const t = new Int16Array(101);
+    for (let a = 0; a <= 100; a++) t[a] = clamp(a, hundredths(SCORE_MIN), hundredths(SCORE_MAX));
+    return { s: t, p: t };
+  })();
+  function aimTable(platt) {
+    if (!platt) return RAW_TABLE;
+    let tab = tables.get(platt);
+    if (tab) return tab;
+    tab = { s: new Int16Array(101), p: new Int16Array(101) };
+    for (let a = 0; a <= 100; a++) {
+      let best = hundredths(SCORE_MIN);
+      for (let h = hundredths(SCORE_MAX); h >= hundredths(SCORE_MIN); h--) {
+        if (hundredths(Model.calibrate(h / 100, platt)) <= a) { best = h; break; }
+      }
+      tab.s[a] = best;
+      tab.p[a] = hundredths(Model.calibrate(best / 100, platt));
+    }
+    tables.set(platt, tab);
+    return tab;
+  }
+
+  // the value (on `key`) a crafted item would have had if the ring had aimed at threshold t
+  function craftedValue(item, t, key, platt) {
+    const tab = aimTable(key === 'p' ? platt : null);
+    return (key === 'p' ? tab.p : tab.s)[aimH(t, item.craftU)] / 100;
+  }
+
+  // A crafted item's score as it arrives: aimed just under `tLag` (the threshold of ADV_LAG_S earlier), on the
+  // axis the threshold is on. The item keeps the aim (the results count them).
+  function craft(item, tLag, key, platt) {
+    const tab = aimTable(key === 'p' ? platt : null), a = aimH(tLag, item.craftU);
+    item.s = tab.s[a] / 100;
+    if (key === 'p' && platt) item.p = tab.p[a] / 100;
+    item.aim = tLag;
+    return item;
+  }
+
+  // the threshold the run had at `time` (its log, one entry per change)
+  function thresholdAt(run, time) {
+    const log = run.tLog;
+    if (!log || !log.length) return State.threshold;
+    for (let k = log.length - 1; k >= 0; k--) if (log[k].at <= time) return log[k].t;
+    return log[0].t;
+  }
+
+  // the live run: an item arrives on the belt; a crafted one gets its score now
+  function onArrive(run, item) {
+    if (item.crafted) craft(item, thresholdAt(run, item.at - ADV_LAG_S), run.key, run.platt);
+  }
+
+  // Headless (the balance check, the tests): the stream as a player with this threshold over time (tOf(time),
+  // on the raw score) would see it — copies of the items, the crafted ones scored against tOf(arrival − lag).
+  function craftedAgainst(items, tOf) {
+    return items.map((it) => {
+      const c = Object.assign({}, it);
+      if (c.crafted) craft(c, tOf(c.at - ADV_LAG_S), 's', null);
+      return c;
+    });
+  }
+
+  // what the crafted items did: how many there were, how many got through (passed: a missed fraud), how many
+  // were caught by the line and how many by people
+  function craftedSummary(decided) {
+    const list = decided.filter((it) => it.crafted);
+    return {
+      total: list.length,
+      through: list.filter((it) => it.outcome === 'FN').length,
+      caught: list.filter((it) => it.outcome === 'TP' && !it.reviewed).length,
+      reviewed: list.filter((it) => it.reviewed).length
+    };
   }
 
   // ---------- the live run ----------
@@ -62,6 +187,7 @@ const Incidents = (() => {
     run.retrained = false;
     run.noDriftFrom = Infinity;
     run.gen = 0;                       // which model scored the items (1 after Retrain)
+    run.tLog = [{ at: 0, t: State.threshold }];   // the threshold over time (the adversary aims at it)
     run.monitor = monitor ? {
       ref: Metrics.psiReference(run.val.map((it) => it.s)), window: [], psi: null, history: [], over: 0, alert: false, alerts: 0
     } : null;
@@ -83,6 +209,8 @@ const Incidents = (() => {
   function update(dt) {
     const run = State.run;
     if (!run || run.kind !== 'contract' || run.ended) return;
+    const last = run.tLog[run.tLog.length - 1];
+    if (last.t !== State.threshold) run.tLog.push({ at: run.clock, t: State.threshold });
     const warnS = DIFFICULTIES[run.difficulty].warnS;
     for (const inc of run.incidents) {
       if (inc.started) continue;
@@ -147,7 +275,7 @@ const Incidents = (() => {
       it.s = Model.rawScore(it.z, m);
       it.gen = 1;
     }
-    const sched = schedule(run.incidents, run.def.prevalence, from);
+    const sched = schedule(run.incidents, run.basePrevalence, from);
     run.model = Object.assign({}, m, { prevalence: sched(Math.min(from, run.items.length - 1)).prevalence });
     Contract.validate(run, (run.seed ^ Rng.hashString('retrain')) >>> 0);
     for (let i = from; i < run.items.length; i++) if (run.platt) run.items[i].p = Model.calibrate(run.items[i].s, run.platt);
@@ -170,7 +298,7 @@ const Incidents = (() => {
     const shift = run.items[from].at - fresh[from].at;
     for (let i = from; i < run.items.length; i++) {
       const it = run.items[i], f = fresh[i];
-      Object.assign(it, { y: f.y, z: f.z, e: f.e, drift: i >= run.noDriftFrom ? 0 : f.drift, at: f.at + shift });
+      Object.assign(it, { y: f.y, z: f.z, e: f.e, drift: i >= run.noDriftFrom ? 0 : f.drift, at: f.at + shift, crafted: !!f.crafted, craftU: f.craftU });
       if (i >= run.noDriftFrom) it.z = Model.logitMean(it.y, run.model.dPrime) + it.e;
       it.s = Model.rawScore(it.z, run.model);
       if (f.amount !== undefined) it.amount = f.amount;
@@ -218,7 +346,7 @@ const Incidents = (() => {
   }
 
   return {
-    rampAt, schedule, pricesAt, setup, nextIndex, upcoming, update, afterGate, canRetrain, retrain, startNow,
+    rampAt, schedule, phaseAt, pricesAt, markCrafted, aimH, aimTable, craftedValue, craft, thresholdAt, onArrive, craftedAgainst, craftedSummary, setup, nextIndex, upcoming, update, afterGate, canRetrain, retrain, startNow,
     alertIndex, retrainedAtAlert
   };
 })();

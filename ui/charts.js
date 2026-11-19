@@ -13,6 +13,9 @@
 // stream with the player's average and the best threshold, the incidents marked on the sparkline, and the
 // reliability diagram of a calibrated contract. With the drift monitor ROC and PR also show the rolling
 // window's "recent" curves (dashed violet); in the sandbox a fourth tab shows the window's reliability diagram.
+// In a top-k run (02 §7) the curves are over k = 0 … TOPK_DOCS on the validation queries (ROC: the pooled FPR and
+// TPR; PR: the mean R@k and P@k), the dot sits at the current k and the ring is the window at the same k; there
+// is no profit or calibration chart. The results of a top-k contract plot k per query and the money at every k.
 // Reads State; used by game.js (update, resize, tabs) and ui/results.js.
 // ============================================================
 
@@ -205,7 +208,7 @@ const Charts = (() => {
     ctx.beginPath(); ctx.moveTo(p.X(0), p.Y(0)); ctx.lineTo(p.X(1), p.Y(1)); ctx.stroke();
     ctx.restore();
     const pts = run.curves.roc;
-    if (!pts) { nothing(p, tr('needs both classes')); return; }
+    if (!pts || (run.curves.topk && pts.some((q) => q.fpr === null || q.tpr === null))) { nothing(p, tr('needs both classes')); return; }
     polyline(p, pts, (q) => q.fpr, (q) => q.tpr);
     ctx.lineTo(p.X(1), p.Y(0));
     ctx.lineTo(p.X(0), p.Y(0));
@@ -219,9 +222,10 @@ const Charts = (() => {
     ctx.stroke();
     const recent = recentCurves(run);
     if (recent && recent.roc) faint(p, recent.roc, (q) => q.fpr, (q) => q.tpr);
-    const lines = ['AUC ' + run.curves.auc.toFixed(2)];
+    const lines = [(run.curves.topk ? tr('area') + ' ' : 'AUC ') + run.curves.auc.toFixed(2)];
+    if (run.curves.topk) lines.push(tr('by k = 1 … {n}', { n: TOPK_DOCS }));
     if (recent && recent.roc) lines.push(tr('recent {v}', { v: Metrics.rocAuc(recent.roc).toFixed(2) }));
-    if (run.kind === 'sandbox') lines.push(tr('theory {v}', { v: Model.theoreticalAuc(run.model.dPrime).toFixed(2) }));
+    if (run.kind === 'sandbox' && !run.curves.topk) lines.push(tr('theory {v}', { v: Model.theoreticalAuc(run.model.dPrime).toFixed(2) }));
     corner(p, lines);
     if (live) ring(p, live.fpr, live.recall);
     if (op.fpr !== null && op.tpr !== null) dot(p, op.fpr, op.tpr, tLabel);
@@ -254,7 +258,8 @@ const Charts = (() => {
     ctx.stroke();
     const recent = recentCurves(run);
     if (recent && recent.pr) faint(p, recent.pr, (q) => q.recall, (q) => q.precision);
-    corner(p, ['AP ' + run.curves.ap.toFixed(2)].concat(recent && recent.pr ? [tr('recent: dashed')] : []));
+    corner(p, run.curves.topk ? [tr('mean P@k against R@k'), tr('by k = 1 … {n}', { n: TOPK_DOCS })]
+      : ['AP ' + run.curves.ap.toFixed(2)].concat(recent && recent.pr ? [tr('recent: dashed')] : []));
     if (live) ring(p, live.recall, live.precision);
     if (op.recall !== null && op.precision !== null) dot(p, op.recall, op.precision, tLabel);
   }
@@ -371,9 +376,18 @@ const Charts = (() => {
   function update(force) {
     const run = State.run;
     if (!run || !run.curves) return;
-    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + tab + '|' + run.curves.auc + '|' + run.bestT + '|' + !!run.monitor;
+    const k = State.threshold + '|' + State.k + '|' + !!run.topk + '|' + State.pileVersion + '|' + run.key + '|' + tab + '|' + run.curves.auc + '|' + run.bestT + '|' + !!run.monitor;
     if (k === key && !force) return;
     key = k;
+    if (run.curves.topk) {   // top-k: the curves over k, the dot at the current k, the ring from the window
+      const op = Topk.operatingPoint(run.curves, State.k);
+      const c = Topk.counts(State.pile, State.k), m = Metrics.compute(c), q = Topk.summary(State.pile, State.k);
+      const has = State.pile.length > 0;
+      const label = 'k = ' + State.k;
+      if (visible('roc')) drawRoc(charts.roc, run, op, has ? { fpr: m.fpr, recall: m.recall } : null, label);
+      if (visible('pr')) drawPr(charts.pr, run, op, has ? { recall: q.rAtK, precision: q.pAtK } : null, label);
+      return;
+    }
     const t = State.threshold;
     // the curves are on the raw score: a threshold on calibrated p is read at its raw equivalent (ADR-0004)
     const op = Metrics.operatingPoint(run.curves, run.key === 'p' ? Model.rawThreshold(t, run.platt) : t);
@@ -381,7 +395,7 @@ const Charts = (() => {
     const tLabel = (run.key === 'p' ? 'p ≥ ' : 't = ') + t.toFixed(2);
     if (visible('roc')) drawRoc(charts.roc, run, op, live, tLabel);
     if (visible('pr')) drawPr(charts.pr, run, op, live, tLabel);
-    if (visible('profit')) drawProfit(charts.profit, run, tLabel);
+    if (visible('profit') && run.profit) drawProfit(charts.profit, run, tLabel);
     if (visible('calib')) drawCalib(charts.calib, run);
   }
 
@@ -406,10 +420,13 @@ const Charts = (() => {
   }
 
   // The threshold against the item number (01 §3.4), with the hindsight-best fixed threshold dashed.
+  // Top-k: k per query (1 … TOPK_DOCS) with the best fixed k; phases (C12): the best threshold of each phase
+  // over its own items.
   function sparkline(canvas, r) {
     const { ctx, w, h } = fit(canvas);
     const x0 = 30, x1 = w - 8, y0 = 8, y1 = h - 18;
-    const X = (i) => x0 + (r.items > 1 ? i / (r.items - 1) : 0) * (x1 - x0), Y = (t) => y1 - t * (y1 - y0);
+    const top = r.topk ? TOPK_DOCS : 1;
+    const X = (i) => x0 + (r.items > 1 ? i / (r.items - 1) : 0) * (x1 - x0), Y = (t) => y1 - t / top * (y1 - y0);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
@@ -417,23 +434,33 @@ const Charts = (() => {
     ctx.font = '10px ' + FONT;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    for (const t of [0, 0.5, 1]) ctx.fillText(String(t), x0 - 4, Y(t));
+    for (const t of r.topk ? [1, 15, 30] : [0, 0.5, 1]) ctx.fillText(String(t), x0 - 4, Y(t));
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(tr('item'), (x0 + x1) / 2, y1 + 4);
+    ctx.fillText(r.topk ? tr('query (the line: k)') : tr('item'), (x0 + x1) / 2, y1 + 4);
     ctx.textAlign = 'left';
     ctx.fillText('1', x0, y1 + 4);
     ctx.textAlign = 'right';
     ctx.fillText(String(r.items), x1, y1 + 4);
-    if (r.best.t !== null) {
-      ctx.save();
-      ctx.setLineDash([5, 4]);
-      ctx.strokeStyle = P.good;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(x0, Y(r.best.t)); ctx.lineTo(x1, Y(r.best.t)); ctx.stroke();
-      ctx.restore();
+    const segs = r.phases ? r.phases.filter((q) => q.best.t !== null).map((q) => ({ a: q.start, b: q.end - 1, t: q.best.t }))
+      : r.best.t !== null ? [{ a: 0, b: r.items - 1, t: r.best.t }] : [];
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = P.good;
+    ctx.lineWidth = 1.5;
+    for (const s of segs) { ctx.beginPath(); ctx.moveTo(X(s.a), Y(s.t)); ctx.lineTo(X(s.b), Y(s.t)); ctx.stroke(); }
+    ctx.restore();
+    // the phases of C12: a thin mark where each one begins
+    for (const q of r.phases || []) {
+      if (!q.p) continue;
+      const x = Math.round(X(q.start)) + 0.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
     }
-    // the incidents: a violet mark at the item each one started with, its name next to it
+    // the incidents: a violet mark at the item each one started with, its name next to it (on a line of its own
+    // when it would run into the one before)
+    let lastEnd = -Infinity, line = 0;
     for (const inc of r.incidents || []) {
       if (!inc.started) continue;
       const x = Math.round(X(inc.at)) + 0.5;
@@ -441,9 +468,14 @@ const Charts = (() => {
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
       ctx.fillStyle = P.review;
-      ctx.textAlign = x > (x0 + x1) / 2 ? 'right' : 'left';
+      const name = tr(inc.name), wName = ctx.measureText(name).width;
+      const left = x + 4 + wName <= x1;
+      const start = left ? x + 4 : x - 4 - wName;
+      line = start < lastEnd + 6 ? line + 1 : 0;
+      lastEnd = start + wName;
+      ctx.textAlign = left ? 'left' : 'right';
       ctx.textBaseline = 'top';
-      ctx.fillText(tr(inc.name), x + (ctx.textAlign === 'left' ? 4 : -4), y0 + 3);
+      ctx.fillText(name, left ? x + 4 : x - 4, y0 + 3 + line * 12);
     }
     const ts = r.thresholds;
     if (!ts.length) return;
@@ -464,7 +496,7 @@ const Charts = (() => {
     for (const q of r.profit) { lo = Math.min(lo, q.money); hi = Math.max(hi, q.money); }
     if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
     const pad = (hi - lo) * 0.06;
-    const X = (t) => x0 + t * (x1 - x0), Y = (v) => y1 - (v - lo + pad) / (hi - lo + 2 * pad) * (y1 - y0);
+    const X = (t) => x0 + (r.topk ? (t - 1) / (TOPK_DOCS - 1) : t) * (x1 - x0), Y = (v) => y1 - (v - lo + pad) / (hi - lo + 2 * pad) * (y1 - y0);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1;
     ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
@@ -479,11 +511,11 @@ const Charts = (() => {
     if (lo < -0.5) ctx.fillText(Hud.money(lo), x0 - 4, Y(lo));
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(tr('threshold'), (x0 + x1) / 2, y1 + 4);
+    ctx.fillText(r.topk ? 'k' : tr('threshold'), (x0 + x1) / 2, y1 + 4);
     ctx.textAlign = 'left';
-    ctx.fillText('0', x0, y1 + 4);
+    ctx.fillText(r.topk ? '1' : '0', x0, y1 + 4);
     ctx.textAlign = 'right';
-    ctx.fillText('1', x1, y1 + 4);
+    ctx.fillText(r.topk ? String(TOPK_DOCS) : '1', x1, y1 + 4);
     ctx.beginPath();
     r.profit.forEach((q, i) => { if (i) ctx.lineTo(X(q.t), Y(q.money)); else ctx.moveTo(X(q.t), Y(q.money)); });
     ctx.strokeStyle = P.text;
