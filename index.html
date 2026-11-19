@@ -10,12 +10,17 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="AI Precision Recall Lab">
 <meta property="og:description" content="Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price.">
+<meta property="og:url" content="https://gray0072.github.io/ai-precision-recall-lab/">
+<meta property="og:image" content="https://gray0072.github.io/ai-precision-recall-lab/screenshot.png">
+<meta property="og:image:width" content="1600">
+<meta property="og:image:height" content="900">
+<meta name="twitter:card" content="summary_large_image">
 <title>AI Precision Recall Lab</title>
 <link rel="icon" type="image/svg+xml" href="icon.svg?v=1">
 <link rel="manifest" href="manifest.webmanifest?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <meta name="theme-color" content="#0d1b2a">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 
@@ -87,6 +92,7 @@
 
 <div id="overlay">
   <div class="panel" id="startPanel">
+    <div class="langPick" role="group" aria-label="Language"></div>
     <img class="logoImg" src="icon.svg?v=1" alt="" width="88" height="88">
     <h1 class="logo" data-i18n>AI Precision Recall Lab</h1>
     <p class="tagline" data-i18n>Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price</p>
@@ -174,6 +180,7 @@
   </div>
 
   <div class="panel wide" id="resultsPanel" hidden>
+    <div class="langPick" role="group" aria-label="Language"></div>
     <div id="results"></div>
     <p class="label" data-i18n>Difficulty</p>
     <div class="btnRow" id="resultsDifficulty">
@@ -215,6 +222,7 @@
   </div>
 
   <div class="panel wide" id="endPanel" hidden>
+    <div class="langPick" role="group" aria-label="Language"></div>
     <div id="endCard"></div>
     <div class="btnRow">
       <button class="btn big" id="endHardBtn" data-i18n>Play again on Hard</button>
@@ -242,12 +250,14 @@
 <script src="data/glossary.js?v=2"></script>
 <script src="data/quiz.js?v=1"></script>
 <script src="data/coach.js?v=3"></script>
+<script src="data/lang-ru.js?v=1"></script>
+<script src="data/lang-sv.js?v=1"></script>
 <script src="core/utils.js?v=1"></script>
 <script src="core/rng.js?v=1"></script>
 <script src="core/events.js?v=1"></script>
-<script src="core/i18n.js?v=1"></script>
+<script src="core/i18n.js?v=2"></script>
 <script src="core/storage.js?v=1"></script>
-<script src="core/audio.js?v=1"></script>
+<script src="core/audio.js?v=2"></script>
 <script src="core/input.js?v=4"></script>
 <script src="core/cursor.js?v=1"></script>
 <script src="core/icons.js?v=1"></script>
@@ -278,10 +288,11 @@
 <script src="ui/glossary.js?v=1"></script>
 <script src="ui/map.js?v=2"></script>
 <script src="ui/briefing.js?v=3"></script>
-<script src="ui/results.js?v=3"></script>
+<script src="ui/results.js?v=4"></script>
 <script src="ui/lab.js?v=1"></script>
 <script src="ui/fireworks.js?v=1"></script>
-<script src="ui/endcard.js?v=1"></script>
-<script src="game.js?v=5"></script>
+<script src="ui/endcard.js?v=2"></script>
+<script src="ui/sounds.js?v=1"></script>
+<script src="game.js?v=6"></script>
 </body>
 </html>

@@ -331,7 +331,14 @@ const Game = (() => {
   }
 
   function boot() {
-    I18N.set('en');   // English only until I07
+    I18N.load();
+    I18N.buildPickers();
+    // a new language: rebuild the texts that the screens built in JS (the static ones follow by applyDom)
+    I18N.onChange(() => {
+      Screens.renderStart();
+      if (Screens.shown === 'results') Results.refresh();
+      else if (Screens.shown === 'end') EndCard.refresh();
+    });
     const d = Store.get('difficulty', DIFFICULTY_DEFAULT);
     State.difficulty = DIFFICULTIES[d] ? d : DIFFICULTY_DEFAULT;
     Campaign.init({

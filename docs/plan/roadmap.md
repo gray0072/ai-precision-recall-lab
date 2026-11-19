@@ -24,7 +24,7 @@ Status values: `todo`, `in progress`, `done`, `skipped`. **This table is the sin
 | I04 | [Campaign Act 1 and the cheat sheet](iterations/I04-campaign-act1.md) | I03 | 3 | 2 | done |
 | I05 | [The Lab, incidents, review desk, Act 2](iterations/I05-lab-incidents-act2.md) | I04 | 4 | 2 | done |
 | I06 | [Act 3: adversary, top-k, finale, attract demo](iterations/I06-act3-topk-demo.md) | I05 | 5 | 1–2 | done |
-| I07 | [Release: sounds, translations, icons, READMEs, GitHub Pages](iterations/I07-release.md) | I06 | 6 | 1–2 | todo |
+| I07 | [Release: sounds, translations, icons, READMEs, GitHub Pages](iterations/I07-release.md) | I06 | 6 | 1–2 | done |
 
 ## Dependency graph
 

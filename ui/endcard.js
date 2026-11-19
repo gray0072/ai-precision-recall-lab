@@ -29,7 +29,10 @@ const EndCard = (() => {
     return END_TITLES.filter((t) => has[t.id]);
   }
 
-  function show(actions) {
+  let lastActions = null;
+
+  function fill(actions) {
+    lastActions = actions;
     const box = $('endCard');
     box.textContent = '';
     box.appendChild(el('h1', 'logo', tr('Cutoff & Co. is now a unicorn')));
@@ -53,9 +56,16 @@ const EndCard = (() => {
     $('endHardBtn').onclick = () => { Fireworks.stop(); actions.hard(); };
     $('endMapBtn').onclick = () => { Fireworks.stop(); actions.map(); };
     $('endStartBtn').onclick = () => { Fireworks.stop(); actions.start(); };
+  }
+
+  function show(actions) {
+    fill(actions);
     Screens.show('end');
     Fireworks.start();
   }
 
-  return { show, titles };
+  // the language changed while the end card is open
+  function refresh() { if (lastActions) fill(lastActions); }
+
+  return { show, refresh, titles };
 })();

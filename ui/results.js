@@ -152,7 +152,10 @@ const Results = (() => {
     bankrupt: () => [tr('Bankrupt!'), tr("The contract's money fell below the limit: the mistakes cost more than the client would cover.")]
   };
 
-  function show(r, paid, actions) {
+  let last = null;              // the last show()'s arguments: refresh() rebuilds the panel in a new language
+
+  function show(r, paid, actions, again) {
+    last = [r, paid, actions];
     const def = CONTRACTS[r.id];
     const box = $('results');
     box.textContent = '';
@@ -166,13 +169,15 @@ const Results = (() => {
       titles.appendChild(el('div', 'brClient', why));
     } else {
       titles.appendChild(el('h1', '', tr('Contract complete')));
-      const stars = el('div', 'resStars');
+      const stars = el('div', 'resStars'), delays = [];
       for (let i = 0; i < 3; i++) {
         const s = el('span', i < r.stars ? 'starOn' : 'starOff', '★');
-        s.style.animationDelay = (0.25 + i * 0.35) + 's';
+        delays.push(0.25 + i * 0.35);
+        s.style.animationDelay = delays[i] + 's';
         stars.appendChild(s);
       }
       titles.appendChild(stars);
+      if (!again) GameEvents.emit('starsShown', { stars: r.stars, delays });   // ui/sounds.js: one note per star
     }
     head.appendChild(titles);
     box.appendChild(head);
@@ -276,5 +281,8 @@ const Results = (() => {
     return p;
   }
 
-  return { show };
+  // the language changed while the results are open
+  function refresh() { if (last) show(last[0], last[1], last[2], true); }
+
+  return { show, refresh };
 })();

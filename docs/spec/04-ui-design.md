@@ -48,7 +48,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 
 | Screen | Content |
 |---|---|
-| **Start** | The language switcher (EN · RU · SV) at the top (from I07); the logo (the game icon, large) and the title **AI Precision Recall Lab**; a one-line tagline ("Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price"); **Continue** (default, when a campaign exists) / **New campaign**; **Sandbox**; **Cheat sheet**; Difficulty Easy · Medium · Hard (toggle row, with a one-line description of the selected one); Sound On · Off; **How to play** (collapsible). The attract demo runs behind it (01 §9). |
+| **Start** | The language switcher (EN · RU · SV) at the top; the logo (the game icon, large) and the title **AI Precision Recall Lab**; a one-line tagline ("Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price"); **Continue** (default, when a campaign exists) / **New campaign**; **Sandbox**; **Cheat sheet**; Difficulty Easy · Medium · Hard (toggle row, with a one-line description of the selected one); Sound On · Off; **How to play** (collapsible). The attract demo runs behind it (01 §9). |
 | **Map** | Three act rows of contract cards (client avatar, name, stars per level, lock); the balance; **Lab**; **Cheat sheet**; back to Start. A "test save" tag when cheated. |
 | **Briefing** | 01 §3.1: avatar and message, the terms table (prices with the outcome colours), the goal, the model card, the quick question, Start / Back. |
 | **Play** | §4. |
@@ -123,12 +123,21 @@ Synthesized with Web Audio (no audio files), in `core/audio.js` (the engine and 
 | stars on the results screen | one note per star, rising |
 | purchase in the Lab | a cash register |
 | belt | a faint low hum while the belt runs, ducked when paused |
+| a top-k query (C11) | one "shuffle" of pages and a note, higher the larger the query's recall@k — one sound per query, not per document |
+| a new phase (C12) | a two-note "next client" chime |
+| drift alert | a two-tone alarm; Retrain done: a rising arpeggio |
+| desk full | a short low beep, at most once a second |
+| contract failed (outbreak, bankruptcy) | a falling four-note phrase |
+| sandbox Generate | a short rustle |
+| end card fireworks | a rising whistle per rocket, a bang per burst (from `ivan`'s city builder) |
+
+The attract demo (01 §9) is silent: it emits the item events too, and `ui/sounds.js` ignores every event while `State.run.kind === 'demo'`. Frequent sounds are throttled (one of a kind per 60 ms; TN per 120 ms), so a fast belt or the sandbox never turns into noise.
 
 The **Sound** switch (On / Off, on the start screen and in the pause dialog) is remembered as `prLab.sound` (`on` / `off`, default `on`) and read before the first sound; every sound goes through one master gain set to 0 or 1 at once.
 
 ## 8. Languages
 
-- **English is the source and the default**; the game is also playable in **Russian** and **Swedish** — added in I07 (owner's decision: English first). Until then the switcher is not shown and the language tables are empty, but every text already goes through `tr()`. Every text goes through `tr('English text', { params })` (`core/i18n.js`, copied from `ivan`'s `world-aviation`), the translations live in `data/lang-ru.js` / `data/lang-sv.js`, keyed by the English text, with an entry for every key. Texts from `data/` tables (contracts, cards, upgrades, questions) go through `tr()` as well, by variable.
+- **English is the source and the default**; the game is also playable in **Russian** and **Swedish** (added in I07; owner's decision: English first). Every text goes through `tr('English text', { params })` (`core/i18n.js`, copied from `ivan`'s `world-aviation`), the translations live in `data/lang-ru.js` / `data/lang-sv.js`, keyed by the English text, with an entry for every key. Texts from `data/` tables (contracts, cards, upgrades, questions) go through `tr()` as well, by variable.
 - **The switcher** is `ivan`'s: a pill of buttons **EN · RU · SV** in this order, a flag (`art/flag-gb.svg`, `flag-ru.svg`, `flag-se.svg`, copied from `ivan/assets/`) and the two-letter code each, the language's own name as the tooltip, the active one `aria-pressed="true"`. It sits at the top of the start screen (and the results / end card), never over the play area. The choice applies at once without a reload and is remembered as `prLab.lang`; on a first visit: the browser's language, then English.
 - Metric names stay English in every language, with the local term next to them where it helps (03 §4 "Local terms"): the English names are what the player will meet in papers and libraries.
 - Screenshots and the GIF for the READMEs show the English UI.

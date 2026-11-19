@@ -152,7 +152,7 @@ The cheat sheet screen (04 §3) shows these cards. Every card has: **name** (wit
 | G-errors | ошибки I и II рода | typ I- och typ II-fel |
 | G-drift | дрейф данных | datadrift |
 
-Russian has a trap worth a line on the RU G-accuracy card: both *precision* and *accuracy* are often translated as «точность»; the game uses «точность» only for precision and «доля верных ответов» for accuracy, and always shows the English term next to it. Swedish terms are checked during the translation in I07.
+Russian has a trap worth a line on the RU G-accuracy card: both *precision* and *accuracy* are often translated as «точность»; the game uses «точность» only for precision and «доля верных ответов» for accuracy, and always shows the English term next to it. The Swedish terms were checked during the translation (I07) and kept; «träffsäkerhet» rather than «noggrannhet» for accuracy, because «noggrannhet» is also used for precision. On the cards whose name is also a short label elsewhere (Confusion matrix, Calibration, Accuracy, F1) the name is only the local term or only the English one, and the card's one-line text carries the other.
 
 ## 5. Briefing questions
 

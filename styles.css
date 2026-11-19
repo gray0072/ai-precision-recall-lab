@@ -140,6 +140,44 @@ button.chip:hover { background: rgba(30, 50, 70, 0.92); }
   box-sizing: border-box;
 }
 .panel h1 { margin: 6px 0 10px; font-size: 28px; }
+/* the language switcher (04 §8, from ivan): EN · RU · SV with flags, at the top of the start screen, the
+   results and the end card */
+.langPick {
+  display: flex;
+  width: max-content;
+  gap: 4px;
+  margin: 0 auto 4px;
+  padding: 4px;
+  border-radius: 22px;
+  background: var(--chip);
+  border: 1px solid var(--chip-border);
+}
+.langPick button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: var(--muted);
+  font: 600 12px 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.langPick button:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.langPick button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.16); color: var(--text); }
+.langPick button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.langPick img {
+  width: 21px;
+  height: 14px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  opacity: 0.6;
+}
+.langPick button:hover img,
+.langPick button[aria-pressed="true"] img { opacity: 1; }
 .logoImg { display: block; width: 88px; height: 88px; margin: 6px auto 4px; }
 .panel h1.logo {
   font-size: clamp(28px, 6.5vw, 42px);
@@ -408,7 +446,7 @@ button.chip:hover { background: rgba(30, 50, 70, 0.92); }
 #sandboxPanel .btnRow { justify-content: flex-start; margin-top: 8px; }
 #sandboxPanel .btn { min-height: 36px; padding: 0 14px; font-size: 13px; }
 .sbNote { min-height: 0; margin: 4px 0; text-align: left; }
-.sbScen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.sbScen { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }   /* one column: long RU / SV names fit */
 .sbScenBtn.btn.toggle {
   display: flex;
   align-items: center;
@@ -422,6 +460,7 @@ button.chip:hover { background: rgba(30, 50, 70, 0.92); }
   line-height: 1.1;
 }
 .sbScenBtn canvas { flex: 0 0 auto; }
+.sbScenBtn span { min-width: 0; overflow-wrap: anywhere; }
 .sbSlider { display: block; margin-top: 12px; }
 .sbHead2 { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
 .sbHead2 b { color: var(--text); font-variant-numeric: tabular-nums; }
