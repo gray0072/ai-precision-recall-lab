@@ -21,7 +21,7 @@ The ML / metrics ideas or the engineering skills this iteration trains.
 
 ## Acceptance criteria
 - [ ] … (observable, testable)
-- [ ] `node --test tests/` passes; `node tools/i18n-check.js .` and `node tools/icons-build.js . --check` are clean.
+- [ ] `node --test tests/*.test.js` passes; `node tools/i18n-check.js .` and `node tools/icons-build.js . --check` are clean.
 - [ ] `?v=N` bumped for every changed CSS/JS file; a browser check on a phone and a desktop viewport shows no page errors.
 - [ ] Docs updated (spec if behavior changed, ADR if a decision was made, README if what the player sees changed).
 

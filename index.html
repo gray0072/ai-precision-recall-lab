@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="AI Precision Recall Lab — a browser game about the metrics of binary classification: drag one threshold line between spam and mail, sick and healthy, fraud and honest, and watch the confusion matrix, precision, recall, F1, ROC and PR curves change.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AI Precision Recall Lab">
+<meta property="og:description" content="Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price.">
+<title>AI Precision Recall Lab</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg?v=1">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
+<meta name="theme-color" content="#0d1b2a">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+<div id="banner" role="status" aria-live="polite"></div>
+
+<div id="overlay">
+  <div class="panel" id="startPanel">
+    <img class="logoImg" src="icon.svg?v=1" alt="" width="88" height="88">
+    <h1 class="logo" data-i18n>AI Precision Recall Lab</h1>
+    <p class="tagline" data-i18n>Draw the line between spam and mail, sick and healthy, fraud and honest — and learn why every line has a price</p>
+    <div class="btnCol">
+      <button class="btn big" id="continueBtn" hidden data-i18n>Continue</button>
+      <button class="btn big" id="newCampaignBtn" data-i18n>New campaign</button>
+      <button class="btn" id="sandboxBtn" data-i18n>Sandbox</button>
+      <button class="btn" id="cheatSheetBtn" data-i18n>Cheat sheet</button>
+    </div>
+    <p class="label" data-i18n>Difficulty</p>
+    <div class="btnRow" id="difficultyRow">
+      <button class="btn toggle" data-difficulty="easy" data-i18n>Easy</button>
+      <button class="btn toggle" data-difficulty="medium" data-i18n>Medium</button>
+      <button class="btn toggle" data-difficulty="hard" data-i18n>Hard</button>
+    </div>
+    <p class="fine" id="difficultyNote"></p>
+    <p class="label" data-i18n>Sound</p>
+    <div class="btnRow" id="soundRow">
+      <button class="btn toggle" data-sound="on" data-i18n>On</button>
+      <button class="btn toggle" data-sound="off" data-i18n>Off</button>
+    </div>
+    <div class="btnRow">
+      <button class="btn secondary" id="helpToggle" aria-expanded="false" aria-controls="help" data-i18n>How to play</button>
+    </div>
+    <div id="help" hidden>
+      <p data-i18n>Items ride a conveyor belt at the height of their <b>model score</b>: 0 at the bottom, 1 at the top. One line, your <b>threshold</b>, decides: everything at or above it is flagged as <b class="pos">positive</b> (spam, fever, fraud…), everything below it passes as <b class="neg">negative</b>.</p>
+      <p data-i18n>At the gate each item is revealed and drops onto the pile, and the pile <b>is</b> the confusion matrix: <b>TP</b> and <b>FP</b> above the line, <b>FN</b> and <b>TN</b> below it. Precision, recall and the ROC and PR curves follow every item.</p>
+      <p data-i18n>Each client pays for right answers and fines you for mistakes. Find the line that earns the most and still meets the client's goal.</p>
+      <p data-i18n><b>Mouse and keyboard:</b> drag the handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (with Shift by 0.05), Page Up / Page Down by 0.10. Esc or P pauses.</p>
+      <p data-i18n><b>Touch:</b> put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items. The large handle on the right can be dragged directly. On phones the game goes fullscreen.</p>
+    </div>
+  </div>
+
+  <div class="panel" id="placeholderPanel" hidden>
+    <h1 id="placeholderTitle"></h1>
+    <p class="tagline" id="placeholderText"></p>
+    <div class="btnRow">
+      <button class="btn default" id="backBtn" data-i18n>Back</button>
+    </div>
+  </div>
+</div>
+
+<script src="constants.js?v=1"></script>
+<script src="data/icons.js?v=1"></script>
+<script src="core/i18n.js?v=1"></script>
+<script src="core/storage.js?v=1"></script>
+<script src="core/audio.js?v=1"></script>
+<script src="core/input.js?v=1"></script>
+<script src="core/cursor.js?v=1"></script>
+<script src="core/icons.js?v=1"></script>
+<script src="core/update.js?v=1"></script>
+<script src="sim/state.js?v=1"></script>
+<script src="ui/screens.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>

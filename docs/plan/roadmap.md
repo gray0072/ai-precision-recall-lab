@@ -18,7 +18,7 @@ Status values: `todo`, `in progress`, `done`, `skipped`. **This table is the sin
 | ID | Iteration | Depends on | Wave | Sessions (est.) | Status |
 |---|---|---|---|---|---|
 | I00 | [Preparation: game design, spec, plan, conventions](iterations/I00-preparation.md) | — | 0 | 1 | done |
-| I01 | [Skeleton: page, tools, i18n, start screen, PWA](iterations/I01-skeleton.md) | I00 | 1 | 1 | todo |
+| I01 | [Skeleton: page, tools, i18n, start screen, PWA](iterations/I01-skeleton.md) | I00 | 1 | 1 | done |
 | I02 | [Simulation core: scores, metrics, curves, tests](iterations/I02-simulation-core.md) | I00 | 1 | 1 | todo |
 | I03 | [Play screen and sandbox](iterations/I03-play-screen-sandbox.md) | I01, I02 | 2 | 1–2 | todo |
 | I04 | [Campaign Act 1 and the cheat sheet](iterations/I04-campaign-act1.md) | I03 | 3 | 2 | todo |
@@ -50,4 +50,4 @@ flowchart TD
 - Spec first: if the plan or the spec turns out wrong, update the doc in the same change.
 - Every text the player sees goes through `tr()`. The game is English only until I07 (owner's decision); from I07 on every text also gets its RU and SV entries in the same change (`node tools/i18n-check.js .`).
 - The GitHub repo and Pages come at the end (I07); until then everything stays local.
-- `node --test tests/` green; `?v=N` bumped for every changed CSS/JS file; a short browser check with `tools/cdp.js` (phone and desktop) for UI changes.
+- `node --test tests/*.test.js` green; `?v=N` bumped for every changed CSS/JS file; a short browser check with `tools/cdp.js` (phone and desktop) for UI changes.

@@ -19,7 +19,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, …) working in t
 | Architecture decisions | [docs/adr/](docs/adr/README.md) |
 | Prompt history (one file per session) | [docs/prompts/](docs/prompts/README.md) |
 | The game | repo root: `index.html`, `styles.css`, `constants.js`, `game.js`, `campaign.js`, `core/`, `data/`, `sim/`, `art/`, `render/`, `ui/` (from I01) |
-| Tests of the simulation | `tests/` (`node --test tests/`, from I01/I02) |
+| Tests of the simulation | `tests/` (`node --test tests/*.test.js`, from I01/I02) |
 | Tools (headless Chrome, icons, translations, balance) | `tools/` (from I01) |
 
 ## Session workflow
@@ -103,7 +103,7 @@ Every prompt from the owner is saved to the prompt history, **in English first, 
 ## Definition of done
 
 An iteration (or task) is done when:
-- [ ] `node --test tests/` passes.
+- [ ] `node --test tests/*.test.js` passes.
 - [ ] Every new player-facing text goes through `tr()`; from I07 on, `node tools/i18n-check.js .` is clean and the `data/` texts are checked by hand in RU and SV.
 - [ ] `node tools/icons-build.js . --check` passes.
 - [ ] `?v=N` is bumped for every changed CSS/JS file.
@@ -114,7 +114,7 @@ An iteration (or task) is done when:
 ## Commands
 
 ```bash
-node --test tests/                                        # simulation unit tests (no browser)
+node --test tests/*.test.js                               # simulation unit tests (no browser)
 node tools/balance-check.js [--contract C05] [--difficulty hard]   # headless bot over the contracts (from I04)
 node tools/i18n-check.js .                                # tr() texts missing from data/lang-ru.js / lang-sv.js
 node tools/icons-build.js . [--check]                     # rebuild data/icons.js (or only check it)
@@ -147,7 +147,7 @@ Open the game: `index.html` from `file://`, or `python -m http.server` in the re
 ## Local environment notes
 
 - OS of the owner: Windows 11; shells: PowerShell and Git Bash.
-- Node 24 is installed (`node --test` and the tools need 20+; the `--experimental-websocket` flag of `tools/cdp.js` is only needed on Node 20 and is harmless later).
+- Node 24 is installed (`node --test` and the tools need 20+; since Node 22 `node --test` takes files or globs, not a folder, hence `tests/*.test.js` — Node expands the glob itself, so it works in PowerShell too; the `--experimental-websocket` flag of `tools/cdp.js` is only needed on Node 20 and is harmless later).
 - Headless Chrome: the installed Google Chrome, found by `tools/cdp.js` under `C:/Program Files/Google/Chrome/Application/chrome.exe`.
 - `gh` CLI is installed and logged in as `gray0072`. The GitHub repo is not created yet: the owner decided to create it and turn on Pages at the end, in I07.
 

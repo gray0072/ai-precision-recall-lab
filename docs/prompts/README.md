@@ -52,3 +52,4 @@ Rules:
 | Session | Date | Iteration | Topic |
 |---|---|---|---|
 | [S01](sessions/2026-11-19_S01_preparation.md) | 2026-11-19 | I00 | Project preparation: game idea, spec, roadmap, AGENTS.md |
+| [S02](sessions/2026-11-19_S02_skeleton.md) | 2026-11-19 | I01 | Skeleton: tools, core, start screen, PWA, test loader |

@@ -1,0 +1,228 @@
+/* AI Precision Recall Lab — every style of the page: the palette tokens (spec 04 §1), the ivan components
+   (buttons, chips, panels, the overlay, the banner, the language switcher), the screens; the play layout and
+   the live panel are added with the play screen (I03). Canvas code takes the same colours from art/palette.js. */
+
+:root {
+  --bg: #0d1b2a;
+  --bg-play: #13263a;
+  --belt-a: #1c3348;
+  --belt-b: #223d55;
+  --panel: rgba(13, 27, 42, 0.95);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --chip: rgba(13, 27, 42, 0.82);
+  --chip-border: rgba(255, 255, 255, 0.1);
+  --text: #eef3f7;
+  --muted: #9fb0c3;
+  --accent: #ffb300;
+  --accent-hover: #ffc233;
+  --focus: rgba(255, 213, 79, 0.6);
+  --pos: #ff8a3d;
+  --neg: #4fc3f7;
+  --good: #7bd88f;
+  --warn: #ffd54f;
+  --bad: #ff6b5e;
+  --review: #b39ddb;
+  --btn: #33495c;
+  --btn-hover: #3f5a71;
+  --on-accent: #1b2733;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', Arial, sans-serif;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  /* a quiet hint of the two classes behind the menu until the attract demo (I06) runs there */
+  background:
+    radial-gradient(ellipse 60% 45% at 18% 85%, rgba(79, 195, 247, 0.10), transparent 70%),
+    radial-gradient(ellipse 60% 45% at 82% 15%, rgba(255, 138, 61, 0.10), transparent 70%),
+    var(--bg);
+}
+html.cursor-hidden, html.cursor-hidden * { cursor: none !important; }
+canvas { display: block; touch-action: none; }
+button { font-family: inherit; touch-action: manipulation; }
+[hidden] { display: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+.pos { color: var(--pos); }
+.neg { color: var(--neg); }
+
+/* ---------- HUD pieces (the HUD itself comes with the play screen) ---------- */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 18px;
+  background: var(--chip);
+  border: 1px solid var(--chip-border);
+  color: #fff;
+  font-size: 15px;
+  white-space: nowrap;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+.chip b { font-variant-numeric: tabular-nums; }
+button.chip { cursor: pointer; font-size: 15px; }
+button.chip:hover { background: rgba(30, 50, 70, 0.92); }
+.round {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--chip);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.round:hover { background: rgba(30, 50, 70, 0.92); }
+.round.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---------- the banner ---------- */
+#banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 8px 18px;
+  border-radius: 20px;
+  background: rgba(13, 27, 42, 0.9);
+  border: 1px solid var(--chip-border);
+  font-size: 15px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 40;
+}
+#banner.on { opacity: 1; }
+
+/* ---------- the screens ---------- */
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+           calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(10, 20, 30, 0.55);
+  z-index: 20;
+  overflow-y: auto;
+}
+.panel {
+  width: 520px;
+  max-width: 100%;
+  margin: auto;
+  padding: 22px 26px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  box-sizing: border-box;
+}
+.panel h1 { margin: 6px 0 10px; font-size: 28px; }
+.logoImg { display: block; width: 88px; height: 88px; margin: 6px auto 4px; }
+.panel h1.logo {
+  font-size: clamp(28px, 6.5vw, 42px);
+  font-weight: 900;
+  line-height: 1.1;
+  background: linear-gradient(100deg, var(--neg) 0%, #fff 48%, var(--pos) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.tagline { color: #c8d6e3; margin: 0 0 16px; line-height: 1.45; }
+.label { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #8296a8; }
+.fine { font-size: 12px; color: #8fa3b6; margin: 6px 0; line-height: 1.4; min-height: 2.8em; }
+.btnRow { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; align-items: center; }
+.btnCol { display: flex; flex-direction: column; gap: 8px; max-width: 280px; margin: 0 auto; }
+.btn {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  background: var(--btn);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover, .btn:focus-visible { background: var(--btn-hover); outline: none; }
+.btn:focus-visible { box-shadow: 0 0 0 3px var(--focus); }
+.btn.default { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.default:hover, .btn.default:focus-visible { background: var(--accent-hover); }
+.btn.secondary { background: transparent; }
+.btn.secondary:hover, .btn.secondary:focus-visible { background: rgba(255, 255, 255, 0.08); }
+.btn.big { min-height: 48px; font-size: 18px; padding: 0 36px; }
+.btn.toggle { min-height: 36px; padding: 0 16px; font-size: 13px; background: transparent; }
+.btn.toggle.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+#help { text-align: left; font-size: 14px; line-height: 1.5; color: #c8d6e3; margin-top: 10px; }
+#help p { margin: 8px 0; }
+
+/* the language switcher (from I07): the same pill as the ivan gallery's */
+.langPick {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 22px;
+  background: rgba(13, 27, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.langPick button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: var(--muted);
+  font: 600 12px 'Segoe UI', Arial, sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.langPick button:hover { background: rgba(255, 255, 255, 0.08); color: #e8eef5; }
+.langPick button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.16); color: #e8eef5; }
+.langPick img { width: 21px; height: 14px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15); opacity: 0.6; }
+.langPick button:hover img,
+.langPick button[aria-pressed="true"] img { opacity: 1; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 700px), (max-height: 500px) {
+  .chip { height: 32px; padding: 0 9px; font-size: 13px; gap: 4px; }
+  button.chip { font-size: 13px; }
+  .round { width: 34px; height: 34px; font-size: 16px; }
+  .panel { padding: 16px; }
+  .panel h1 { font-size: 24px; }
+}
+/* a phone held sideways: a smaller logo keeps the buttons in view */
+@media (max-height: 500px) {
+  .logoImg { width: 56px; height: 56px; margin-top: 0; }
+  .panel { width: 600px; }
+  .panel h1.logo { font-size: 28px; margin: 2px 0 6px; }
+  .tagline { margin-bottom: 10px; font-size: 14px; }
+  .btn.big { min-height: 44px; font-size: 16px; }
+  .label { margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #banner { transition: none; }
+}

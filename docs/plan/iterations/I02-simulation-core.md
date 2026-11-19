@@ -26,7 +26,7 @@ The binormal model and why AUC = Φ(d'/√2); ROC AUC as the Mann–Whitney stat
 - Incidents, review desk, top-k (I05, I06); anything drawn.
 
 ## Acceptance criteria
-- [ ] `node --test tests/` passes, including: AUC of 20 000 samples at `d'` = 2 within 0.01 of 0.921; Platt recovers `a`, `b` within 5 %; metrics match hand-computed matrices; AP matches a known scikit-learn example; the same seed gives the same stream.
+- [ ] `node --test tests/*.test.js` passes, including: AUC of 20 000 samples at `d'` = 2 within 0.01 of 0.921; Platt recovers `a`, `b` within 5 %; metrics match hand-computed matrices; AP matches a known scikit-learn example; the same seed gives the same stream.
 - [ ] A small script (in the test suite) plays C02's terms at t = 0.5 and at the hindsight-best and prints money and precision; the best is better and meets the goal.
 
 ## Result

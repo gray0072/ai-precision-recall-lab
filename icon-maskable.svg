@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- AI Precision Recall Lab, the maskable PWA icon: the art of icon.svg, full-bleed, scaled by 0.8 so it stays
+       inside the central circle of radius ≈ 170 that every mask keeps. Rendered to PNG by tools/pwa-icons.sh. -->
+  <rect width="512" height="512" fill="#0f2033"/>
+  <g transform="translate(256 256) scale(0.8) translate(-264 -256)">
+    <g id="art">
+      <!-- the score axis -->
+      <path d="M256 92V420" stroke="#9fb0c3" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+      <!-- positives: right of the axis, a hump high up -->
+      <g fill="#ff8a3d">
+        <circle cx="280" cy="110" r="11"/>
+        <circle cx="280" cy="140" r="11"/><circle cx="306" cy="140" r="11"/><circle cx="332" cy="140" r="11"/>
+        <circle cx="280" cy="170" r="11"/><circle cx="306" cy="170" r="11"/><circle cx="332" cy="170" r="11"/><circle cx="358" cy="170" r="11"/><circle cx="384" cy="170" r="11"/>
+        <circle cx="280" cy="200" r="11"/><circle cx="306" cy="200" r="11"/><circle cx="332" cy="200" r="11"/><circle cx="358" cy="200" r="11"/>
+        <circle cx="280" cy="230" r="11"/><circle cx="306" cy="230" r="11"/><circle cx="332" cy="230" r="11"/>
+        <circle cx="280" cy="290" r="11"/><circle cx="306" cy="290" r="11"/>
+        <circle cx="280" cy="320" r="11"/>
+      </g>
+      <!-- negatives: left of the axis, a hump low down -->
+      <g fill="#4fc3f7">
+        <circle cx="232" cy="200" r="11"/>
+        <circle cx="232" cy="230" r="11"/><circle cx="206" cy="230" r="11"/>
+        <circle cx="232" cy="290" r="11"/><circle cx="206" cy="290" r="11"/><circle cx="180" cy="290" r="11"/><circle cx="154" cy="290" r="11"/>
+        <circle cx="232" cy="320" r="11"/><circle cx="206" cy="320" r="11"/><circle cx="180" cy="320" r="11"/><circle cx="154" cy="320" r="11"/><circle cx="128" cy="320" r="11"/>
+        <circle cx="232" cy="350" r="11"/><circle cx="206" cy="350" r="11"/><circle cx="180" cy="350" r="11"/><circle cx="154" cy="350" r="11"/>
+        <circle cx="232" cy="380" r="11"/><circle cx="206" cy="380" r="11"/>
+        <circle cx="232" cy="410" r="11"/>
+      </g>
+      <!-- the threshold line and its handle -->
+      <path d="M78 260H402" stroke="#0d1b2a" stroke-width="26" stroke-linecap="round"/>
+      <path d="M78 260H402" stroke="#ffb300" stroke-width="16" stroke-linecap="round"/>
+      <rect x="388" y="226" width="68" height="68" rx="20" fill="#ffb300" stroke="#0d1b2a" stroke-width="6"/>
+      <path d="M410 248H434M410 260H434M410 272H434" stroke="#0d1b2a" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

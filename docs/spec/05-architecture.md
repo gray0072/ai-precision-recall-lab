@@ -35,7 +35,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── rng.js              mulberry32, named sub-streams, normal / Poisson / log-normal samplers
 │   ├── events.js           GameEvents: the bus the logic reports through (on / emit)
 │   ├── audio.js            Web Audio engine, master gain, sound recipes
-│   ├── input.js            pointer drag (absolute on the handle, relative on the belt), wheel, keys, taps, fullscreen
+│   ├── input.js            fullscreen on touch devices; pointer drag (absolute on the handle, relative on the belt), wheel, keys, taps (I03)
 │   ├── storage.js          localStorage under the prLab. prefix, with try/catch and defaults
 │   ├── cursor.js           hides the mouse cursor in fullscreen while it is still (from ivan)
 │   ├── icons.js            the Icons engine (from ivan)
@@ -75,6 +75,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   └── fireworks.js        the end card's fireworks (from ivan)
 ├── tests/                  Node tests of sim/ (node --test)
 │   ├── load.js             loads constants, data and sim files into a vm context (plain scripts)
+│   ├── smoke.test.js       the scripts load; the state and the difficulty table are there
 │   ├── model.test.js
 │   ├── metrics.test.js
 │   ├── contract.test.js
@@ -85,8 +86,8 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   │                       prints money, goal feasibility, star reachability per difficulty
 │   ├── cdp.js              drives the page in headless Chrome (from ivan)
 │   ├── pwa-icons.sh        renders the PWA PNGs from the SVG icons (from ivan, adapted to the repo root)
-│   ├── icons-build.js      builds data/icons.js (from ivan) + icons/ (engine, mono signs, Twemoji cache)
-│   └── i18n-check.js       lists tr() texts missing from the language tables (from ivan)
+│   ├── icons-build.js      builds data/icons.js and core/icons.js (from ivan) + icons/ (engine, mono signs, Twemoji cache)
+│   └── i18n-check.js       lists tr() and [data-i18n] texts missing from the language tables (from ivan)
 ├── docs/                   spec, plan, ADRs, prompt history (not part of the game)
 ├── README.md, README_RU.md, README_SV.md   player-facing docs (the three link to each other; RU and SV from I07)
 ├── AGENTS.md, CLAUDE.md
@@ -130,12 +131,13 @@ A new save format gets a new key suffix (`.v2`) and a migration from the old one
 ## 6. PWA and updates
 
 - `manifest.webmanifest`: `name` "AI Precision Recall Lab", `short_name` "PR Lab" (≤ 12 chars), `description`, `start_url` / `scope` `"./"`, `id` `"/ai-precision-recall-lab/"` (absolute on purpose: a relative `id` resolves against the origin and would clash with every other app on `gray0072.github.io`), `display` `fullscreen`, `theme_color` / `background_color` `#0d1b2a`, icons `icon-192.png` + `icon-512.png` (`any`) and `icon-maskable-512.png` (`maskable`), all with `?v=N`.
-- `<head>`: the viewport meta `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`, `mobile-web-app-capable`, `apple-mobile-web-app-capable`, favicon `icon.svg?v=N`, manifest, `apple-touch-icon`, `theme-color`, a `description` and Open Graph tags with `screenshot.png`.
+- Static texts in `index.html` are `[data-i18n]` elements whose English inner HTML is the key (`core/i18n.js` `applyDom`); `tools/i18n-check.js` reads them too.
+- `<head>`: the viewport meta `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`, `mobile-web-app-capable`, `apple-mobile-web-app-capable`, favicon `icon.svg?v=N`, manifest, `apple-touch-icon`, `theme-color`, a `description` and Open Graph tags (`og:image` with the absolute URL of `screenshot.png` from I07, when the screenshot exists).
 - `core/update.js` (`AppUpdate.watch(() => idle)`, idle = the start screen or the map): on every return to the foreground and once an hour it fetches `index.html`, compares its `?v=N` links with the running page's, and reloads at the next idle moment.
 
 ## 7. Testing
 
-- **Unit tests (Node, no browser):** `node --test tests/`. `tests/load.js` loads `constants.js`, `data/*.js`, `core/utils.js`, `core/rng.js`, `core/events.js` and `sim/*.js` into a `vm` context and returns its globals. They cover at least:
+- **Unit tests (Node, no browser):** `node --test tests/*.test.js`. `tests/load.js` loads `constants.js`, `data/*.js`, `core/utils.js`, `core/rng.js`, `core/events.js`, `sim/*.js` and `campaign.js` (the ones that exist, in load order) into one `vm` context and returns their top-level declarations; values from it belong to another realm, so copy arrays (`Array.from`) before `deepStrictEqual`. They cover at least:
   - metrics on hand-made matrices (every formula of 02 §3.2, the empty-denominator rules);
   - ROC AUC equals the Mann–Whitney statistic; for 20 000 samples with `d'` = 2 the AUC is within 0.01 of `Φ(√2)` = 0.921; ROC is monotone; recall never rises with the threshold;
   - AP on a known small example (the scikit-learn value);
@@ -153,4 +155,4 @@ A new save format gets a new key suffix (`.v2`) and a migration from the old one
 
 - GitHub repo `gray0072/ai-precision-recall-lab` (public), **Settings → Pages → Deploy from a branch → `main` / (root)**. No workflow, no build: pushing to `main` deploys. `.nojekyll` at the root.
 - Live URL: `https://gray0072.github.io/ai-precision-recall-lab/`. All links are relative (the site lives under a subpath).
-- Optional later: a CI workflow that runs `node --test tests/`, `tools/i18n-check.js` and `tools/icons-build.js --check` on pushes (the game itself needs no CI).
+- Optional later: a CI workflow that runs `node --test tests/*.test.js`, `tools/i18n-check.js` and `tools/icons-build.js --check` on pushes (the game itself needs no CI).
