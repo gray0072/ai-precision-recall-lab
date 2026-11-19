@@ -2,7 +2,7 @@
 
 - **Iteration:** I00 (preparation: game design, spec, plan, repo conventions)
 - **Agent:** Claude Code (VS Code)
-- **Outcome:** game designed ("Threshold Tycoon"); spec in `docs/spec/`, roadmap with iterations I01–I07, three ADRs, AGENTS.md / CLAUDE.md, prompt history. No code; implementation starts in the next session after the owner's review.
+- **Outcome:** game designed ("AI Precision Recall Lab"; the working title "Threshold Tycoon" was dropped after the review); English first, translations in I07; MIT licence; GitHub and Pages at the end; spec in `docs/spec/`, roadmap with iterations I01–I07, three ADRs, AGENTS.md / CLAUDE.md, prompt history. No code; implementation starts in the next session after the owner's review.
 
 ---
 
@@ -56,4 +56,40 @@ Original (ru):
 пофантазируй на эту тему и сделай спеку для приложения. кодить будем в следующей сессии после ревью. коммит.
 промпты сохраняй как описано в D:\Projects\my\ai-rag-film-search настрой agents ааналогично.
 оформление web-приложения и правила возьми из D:\Projects\my\ivan. правила структурирования кода тоже. игра будет одна
+```
+
+## Prompt 2
+
+English:
+
+```text
+remove the name Threshold Tycoon, come up with another one
+```
+
+Original (ru):
+
+```text
+название Threshold Tycoon убери, придумай другое
+```
+
+## Prompt 3
+
+English:
+
+```text
+1. I like something about AI Lab and something else better. Maybe AI Precision Recall Lab? or AI Recall Lab
+2. English first, then the translations
+3. fine
+4. yes
+5. at the end
+```
+
+Original (ru):
+
+```text
+1. мне больше нравится что-то про AI Lab и что-то еще. может AI Precision Recall Lab? или AI Recall Lab
+2. сначала англ, потом переводы
+3. норм
+4. да
+5. в конце
 ```

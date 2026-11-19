@@ -30,7 +30,7 @@ Precision vs recall as a business decision; F1 as the weakest link; cost-sensiti
 - [ ] C01–C05 can be played through on Medium; stars, bests and money survive a reload; replay pays money and fee per the rules of 01 §4.
 - [ ] `tools/balance-check.js` reports every Act 1 contract as winnable at ★★★ on Easy, Medium and Hard, and t = 0.5 not winning ★★★ on C02, C03 and C05 (the point of those contracts).
 - [ ] The C01 tutorial runs end to end on a phone.
-- [ ] Every cheat sheet card renders in EN, RU and SV.
+- [ ] Every cheat sheet card renders on a phone and a desktop, all texts through `tr()` (the RU/SV terms of 03 §4 are added in I07).
 
 ## Result
 _Filled in at the end of the iteration._

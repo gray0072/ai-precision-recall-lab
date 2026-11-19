@@ -1,6 +1,6 @@
 # 00 — Overview
 
-**Threshold Tycoon** (working title) is a browser game and an interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, and how base rates, drift and adversaries break a threshold that looked fine yesterday. It is a static site on GitHub Pages: no backend, no build step, installable as a PWA, playable on a phone.
+**AI Precision Recall Lab** is a browser game and an interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, and how base rates, drift and adversaries break a threshold that looked fine yesterday. It is a static site on GitHub Pages: no backend, no build step, installable as a PWA, playable on a phone.
 
 The repo name is `ai-precision-recall-lab`; the live URL will be `https://gray0072.github.io/ai-precision-recall-lab/`.
 
@@ -26,7 +26,7 @@ You run **Cutoff & Co.**, a tiny AI start-up that sells classifiers to clients: 
 1. **Teach by seeing.** Every number on screen can be traced to items the player has watched fall. Hovering or tapping a metric lights up the cells and the part of the pile it is made of, and shows its formula with the live numbers.
 2. **Make the trade-off felt, not told.** Precision and recall pull against each other through the player's own hand on the threshold; the right answer depends on the client's price list, and the game tells you afterwards how close you came to the best threshold in hindsight.
 3. **Show real-world traps.** Accuracy on rare classes, precision's dependence on the base rate, drift, miscalibrated scores, adversaries gaming a fixed threshold, retrieval at top-k.
-4. **Be a polished GitHub Pages demo.** Opens instantly, works offline as a PWA, looks good in a screenshot and a GIF, playable in English, Russian and Swedish.
+4. **Be a polished GitHub Pages demo.** Opens instantly, works offline as a PWA, looks good in a screenshot and a GIF; English first, then also Russian and Swedish.
 5. **Be a useful cheat sheet.** The in-game cheat sheet (and a short version in the README) is good enough to come back to before an interview.
 
 ## Audience
@@ -46,8 +46,8 @@ You run **Cutoff & Co.**, a tiny AI start-up that sells classifiers to clients: 
 
 ## Scope
 
-- **MVP** (I01–I04): menu, sandbox, play screen with belt, pile, matrix, metrics, ROC/PR; Act 1 (contracts C01–C05) with briefings, results and stars; cheat sheet; EN/RU/SV.
-- **Full** (I05–I07): the Lab and upgrades, incidents, Acts 2 and 3 (C06–C12), review desk, top-k retrieval, attract demo, sounds, READMEs, icons, deploy.
+- **MVP** (I01–I04): menu, sandbox, play screen with belt, pile, matrix, metrics, ROC/PR; Act 1 (contracts C01–C05) with briefings, results and stars; cheat sheet; English only.
+- **Full** (I05–I07): the Lab and upgrades, incidents, Acts 2 and 3 (C06–C12), review desk, top-k retrieval, attract demo; then the release: sounds, Russian and Swedish, READMEs, icons, GitHub repo and Pages.
 - **Later (not planned):** an endless mode with a leaderboard; a "real data" contract with a small public dataset (e.g. SMS spam) scored by a logistic regression trained in the browser; multi-class (one-vs-rest) metrics; a shareable results card.
 
 ## Out of scope
@@ -56,10 +56,12 @@ You run **Cutoff & Co.**, a tiny AI start-up that sells classifiers to clients: 
 - Real ML training in the MVP (scores are synthetic and controlled, see [ADR-0002](../adr/0002-synthetic-binormal-scores.md)).
 - Third-party chart or UI libraries ([ADR-0003](../adr/0003-hand-drawn-canvas-charts.md)).
 
-## Open questions for the review
+## Decisions from the review
 
-1. Title: **Threshold Tycoon** (with the subtitle "a precision & recall lab"), or something else?
-2. Three languages (EN/RU/SV, as in `ivan`) from the first iteration, or English first and the translations at the end? This spec assumes all three from I01.
-3. Is the scope of 12 contracts right, or should Act 3 (adversary, top-k, finale) be cut to "later"?
-4. Licence: MIT, as in `ivan`?
-5. The GitHub repo is not created yet: public repo `gray0072/ai-precision-recall-lab` with Pages from `main` / root (planned in I07, or earlier if you want a live preview)?
+Owner's review, 2026-11-19 (session S01):
+
+1. **Title: AI Precision Recall Lab** (PWA short name "PR Lab"), the same as the repo. The working title "Threshold Tycoon" is dropped. The player's company stays **Cutoff & Co.**
+2. **English first, translations later.** Texts go through `tr()` from the first iteration, but the game is English only until I07, which adds Russian, Swedish and the language switcher.
+3. **Scope:** all 12 contracts in 3 acts.
+4. **Licence:** MIT, as in `ivan`.
+5. **GitHub:** the public repo `gray0072/ai-precision-recall-lab` and Pages (from `main` / root) are set up at the end, in I07.

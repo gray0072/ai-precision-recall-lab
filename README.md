@@ -1,6 +1,6 @@
-# Threshold Tycoon — a precision & recall lab
+# AI Precision Recall Lab
 
-A browser game that teaches the metrics of binary classification by letting you draw the line yourself. Letters, passengers, bolts and card payments ride a conveyor belt at the height of their model score; you drag one threshold line, every item is revealed at the gate and falls onto a pile that *is* the confusion matrix, and precision, recall, F1, the ROC and the PR curves react as you move. Twelve client contracts with their own prices for mistakes, a lab of model upgrades, a sandbox and a cheat sheet. Runs on GitHub Pages and on a phone, in English, Russian and Swedish.
+A browser game that teaches the metrics of binary classification by letting you draw the line yourself. Letters, passengers, bolts and card payments ride a conveyor belt at the height of their model score; you drag one threshold line, every item is revealed at the gate and falls onto a pile that *is* the confusion matrix, and precision, recall, F1, the ROC and the PR curves react as you move. Twelve client contracts with their own prices for mistakes, a lab of model upgrades, a sandbox and a cheat sheet. Runs on GitHub Pages and on a phone; English first, Russian and Swedish later.
 
 > **Status:** design and spec stage, no code yet. The game is built iteration by iteration, see the [roadmap](docs/plan/roadmap.md).
 

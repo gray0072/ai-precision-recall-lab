@@ -4,7 +4,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, …) working in t
 
 ## Project in one paragraph
 
-**Threshold Tycoon** (repo `ai-precision-recall-lab`) is a browser game and interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, base rates, drift, adversaries and top-k retrieval. Items ride a conveyor belt at the height of their model score, the player drags one threshold line, items are revealed at the gate and fall onto a pile that *is* the confusion matrix; a campaign of 12 client contracts, a Lab of model upgrades, a sandbox and a cheat sheet. One game at the repo root, a static site on GitHub Pages: vanilla JS, Canvas 2D, Web Audio, no build step, an installable PWA, English / Russian / Swedish. The look and the code conventions come from the owner's games repo `ivan` (`D:\Projects\my\ivan`); the workflow and the prompt history from `ai-rag-film-search` (`D:\Projects\my\ai-rag-film-search`). The owner is growing from full-stack developer to AI engineer, so **explain ML-specific decisions** (a metric's definition, an edge case, a modelling choice) briefly when you make them.
+**AI Precision Recall Lab** (repo `ai-precision-recall-lab`) is a browser game and interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, base rates, drift, adversaries and top-k retrieval. Items ride a conveyor belt at the height of their model score, the player drags one threshold line, items are revealed at the gate and fall onto a pile that *is* the confusion matrix; a campaign of 12 client contracts, a Lab of model upgrades, a sandbox and a cheat sheet. One game at the repo root, a static site on GitHub Pages: vanilla JS, Canvas 2D, Web Audio, no build step, an installable PWA, English / Russian / Swedish. The look and the code conventions come from the owner's games repo `ivan` (`D:\Projects\my\ivan`); the workflow and the prompt history from `ai-rag-film-search` (`D:\Projects\my\ai-rag-film-search`). The owner is growing from full-stack developer to AI engineer, so **explain ML-specific decisions** (a metric's definition, an edge case, a modelling choice) briefly when you make them.
 
 ## Where things are
 
@@ -47,8 +47,9 @@ Every prompt from the owner is saved to the prompt history, **in English first, 
 ## Languages
 
 - **English** for code, comments, docs, commit messages and the game's source texts.
-- **The game is playable in English, Russian and Swedish.** English is the default and the source text in the code: every text goes through `tr('English text', { params })` (`core/i18n.js`); the translations live in `data/lang-ru.js` / `data/lang-sv.js`, keyed by the English text, with a matching entry for every key.
-- **Translations are maintained, never left behind.** Every change that adds or rewords a text the player sees (a message, a label, a button, a card, a contract, a coach mark) adds or updates its entry in both tables in the same change; a text that shows up in English in the RU or SV game is a bug. Drop entries whose key is no longer used. Run `node tools/i18n-check.js .` before committing; texts passed to `tr()` through a variable (the `data/` tables) it cannot see — check those by hand. Metric names stay English in every language, with the local term next to them (spec 03 §4).
+- **The game is playable in English, Russian and Swedish.** English is the default and the source text in the code: every text goes through `tr('English text', { params })` (`core/i18n.js`) from the first line of UI code; the translations live in `data/lang-ru.js` / `data/lang-sv.js`, keyed by the English text, with a matching entry for every key.
+- **English first, translations in I07** (owner's decision, 2026-11-19). Until I07 the game is English only: texts already go through `tr()`, but the language tables stay empty and the language switcher is not shown. I07 fills both tables, adds the switcher and the RU/SV READMEs; from then on the rule below applies.
+- **Translations are maintained, never left behind** (from I07 on). Every change that adds or rewords a text the player sees (a message, a label, a button, a card, a contract, a coach mark) adds or updates its entry in both tables in the same change; a text that shows up in English in the RU or SV game is a bug. Drop entries whose key is no longer used. Run `node tools/i18n-check.js .` before committing; texts passed to `tr()` through a variable (the `data/` tables) it cannot see — check those by hand. Metric names stay English in every language, with the local term next to them (spec 03 §4).
 - The READMEs: `README.md` (English), `README_RU.md`, `README_SV.md`, linked to each other at the top; a change described in one is described in all three.
 - The owner may write prompts in Russian. Answer the owner in the language of the prompt; write project files in English.
 
@@ -103,7 +104,7 @@ Every prompt from the owner is saved to the prompt history, **in English first, 
 
 An iteration (or task) is done when:
 - [ ] `node --test tests/` passes.
-- [ ] `node tools/i18n-check.js .` is clean and the `data/` texts are checked by hand in RU and SV.
+- [ ] Every new player-facing text goes through `tr()`; from I07 on, `node tools/i18n-check.js .` is clean and the `data/` texts are checked by hand in RU and SV.
 - [ ] `node tools/icons-build.js . --check` passes.
 - [ ] `?v=N` is bumped for every changed CSS/JS file.
 - [ ] A short headless-Chrome run (`tools/cdp.js`) on a phone (portrait and landscape) and a desktop viewport shows no page errors; screenshots look right.
@@ -148,7 +149,7 @@ Open the game: `index.html` from `file://`, or `python -m http.server` in the re
 - OS of the owner: Windows 11; shells: PowerShell and Git Bash.
 - Node 24 is installed (`node --test` and the tools need 20+; the `--experimental-websocket` flag of `tools/cdp.js` is only needed on Node 20 and is harmless later).
 - Headless Chrome: the installed Google Chrome, found by `tools/cdp.js` under `C:/Program Files/Google/Chrome/Application/chrome.exe`.
-- `gh` CLI is installed and logged in as `gray0072`. The GitHub repo is not created yet (planned in I07, ask the owner first).
+- `gh` CLI is installed and logged in as `gray0072`. The GitHub repo is not created yet: the owner decided to create it and turn on Pages at the end, in I07.
 
 ## Docs to keep in sync
 
