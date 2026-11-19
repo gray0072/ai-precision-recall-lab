@@ -1,0 +1,20 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Node (tools and tests only; the game has no dependencies)
+node_modules/
+*.log
+
+# Local output of tools (screenshots of test runs, temp steps files)
+out/
+tmp/
+
+# Claude Code local settings
+.claude/settings.local.json
