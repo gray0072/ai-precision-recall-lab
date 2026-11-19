@@ -23,5 +23,5 @@ const State = {
   paused: false,                // the pause dialog is open (01 §12): the belt, the stream and the timers stop
   held: false,                  // a coach mark is waiting for the player (01 §13): the stream stops, the line still moves
   highlight: null,              // the live panel points at a metric: { id, num: ['TP'], den: ['TP', 'FP'] }
-  review: null                  // the review band and queue, once unlocked (I05)
+  review: null                  // the review desk of the run (sim/review.js): band edge, queue, level; null without one
 };

@@ -84,25 +84,25 @@ The results screen shows:
 
 ## 4. Money and stars
 
-- Money per item = the price of its outcome (TP / FP / FN / TN), or for value-weighted contracts (fraud) a function of the item's amount (03 §2). Review desk items cost the review fee instead (§5).
+- Money per item = the price of its outcome (TP / FP / FN / TN), or for value-weighted contracts (the fraud prices) a function of the item's amount (03 §2). Review desk items cost the review fee instead (§5): people's decision is right, but it earns nothing more than it costs. A price change (§6) applies from its item on.
 - **Fee**: on completion (not on failure) the client pays the contract's fee, plus `QUIZ_BONUS` for a right quiz answer (once per contract).
 - **Stars**, per contract and difficulty:
   - ★ — completed (not failed) **and** the goal met;
-  - ★★ — also profit ≥ the contract's `target` (03 §2);
+  - ★★ — also profit ≥ the contract's `target` (03 §2; one number, or one per level where the streams of one level vary a lot: C08, C09);
   - ★★★ — also profit ≥ `STAR3_SHARE` (90 %) of the hindsight-best profit.
   - A contract with no metric goal (C01, C05, C08, C10) gives ★ for completing it.
 - Replaying a contract pays its money again (so the Lab can always be reached), but the fee only for more stars than that level's record (the first completion on a level always pays it). A failed contract keeps its own money (usually fines) but pays no fee; quitting from the pause dialog loses the contract and its money. A run with a debug cheat pays only its own money (§14).
 
 ## 5. The Lab (upgrades)
 
-The Lab is a screen reached from the map and the results. It shows the **model card** of each scenario family (AUC now and after the selected upgrade, with a mini ROC that animates from the old curve to the new one when the player points at an upgrade) and the list of upgrades (03 §3) with their price, effect and state (locked / can buy / bought).
+The Lab is a screen reached from the map and the results; it opens after C01 (a star on it). It shows the **model card** of each scenario family (AUC now and after the selected upgrade, with a mini ROC that animates from the old curve to the new one when the player points at an upgrade) and the list of upgrades (03 §3) with their price, effect and state (locked / can buy / bought).
 
 Upgrades are bought with money and kept for the whole campaign. Kinds:
 
 - **Better model** (more data I–III, features per scenario family): add to the separation `d'` of the scenario's model (02 §2.1), so the two humps of the pile move apart and the curves bulge towards the corner. This is the "move the distributions apart, shrink the overlap" idea from the start.
 - **Calibration** (Platt scaling): from now on the badges show calibrated probabilities `p`, the threshold handle reads "p ≥ 0.62", and on Easy/Medium the **cost-optimal threshold** for the contract's prices (02 §5.1) is shown as a dashed ghost line on the belt. Calibration is fitted at the start of a contract on the validation set, so a base rate shift during the contract makes it **stale** (02 §2.3), which is one of Act 2's lessons.
-- **Drift monitor**: a small chart in the HUD with the population stability index (PSI) of the score distribution against the validation set (02 §6.2), and an alert banner when it crosses `PSI_ALERT` (0.2). It also unlocks **Retrain** (once per contract: after `RETRAIN_S` 15 s the model gets back its original `d'` for the new data). C09 lends the monitor for free.
-- **Review desk** (levels I–III): unlocks a second handle on the threshold line, the **review band** `[t_review, t)`: items with a score in the band go to human reviewers instead of being decided by the model. Reviewers are always right but cost `REVIEW_FEE` per item and have a capacity (items per second, by level); an item that reaches the gate while the desk is full is decided by the model's threshold as usual, and a "Desk full" chip flashes. The player can also tap a single item on the belt to send it to review (it goes into the queue first). C08 lends the desk for free.
+- **Drift monitor**: a chip in the HUD with the population stability index (PSI) of the last scores against the validation set and a small chart of it (02 §6.2), and an alert banner when it stays above `PSI_ALERT` (0.2). With it ROC and PR also draw the rolling window's "recent" curves (dashed). It also unlocks **Retrain** (once per contract: after `RETRAIN_S` 15 s the items still to come are scored by a model with its original `d'` for the new data). C09 lends the monitor for free.
+- **Review desk** (levels I–III): unlocks a second handle on the threshold line, the **review band** `[t_review, t)`: items with a score in the band go to human reviewers instead of being decided by the model. Reviewers are always right but cost `REVIEW_FEE` per item and have a capacity (items per second, by level); an item that reaches the gate while the desk is full is decided by the model's threshold as usual, and a "Desk full" chip flashes. The desk holds `REVIEW_QUEUE` (3) items at a time and finishes one every 1 / rate seconds. The player can also tap (or click) a single item on the belt to send it to review: it takes its place in the queue at once (or "Desk full") and is decided by people at the gate, wherever it rides. C08 lends desk II for free.
 
 ## 6. Incidents
 
@@ -150,7 +150,7 @@ Three levels, picked on the start screen and in the results / failure dialog (pr
 | True class on the belt | faint tint | hidden | hidden |
 | Model separation `d'` | +0.2 | ±0 | −0.2 |
 | Cost-optimal ghost line | always (computed on the true posterior) | with Calibration | never |
-| Goal targets | −0.05 | as listed | +0.02 |
+| Goal targets (except a fixed KPI: C06) | −0.05 | as listed | +0.02 |
 | Outbreak allowance | +2 | as listed | −1 |
 | Incident warning | 10 s ahead | 10 s ahead | none |
 | Review desk capacity | +1 level | as bought | −1 level (min I) |
@@ -162,8 +162,8 @@ Three levels, picked on the start screen and in the results / failure dialog (pr
 
 - **Drag the threshold**: drag the handle, or press anywhere on the belt or the pile and drag up/down (the line follows the pointer's height). **Mouse wheel** over the play area: ±0.01 per notch (±0.05 with Shift).
 - **Keys**: ↑ / ↓ or W / S = ±0.01; with Shift ±0.05; Page Up / Page Down ±0.10; Home / End = 1.00 / 0.00.
-- **Review band** (when unlocked): drag its handle; Q / A move it ±0.01 (Shift ±0.05). The band cannot go above the threshold.
-- **Send to review**: click an item on the belt.
+- **Review band** (when unlocked): drag its handle (at the left edge of the belt); Q / A move it ±0.01 (Shift ±0.05). The band cannot go above the threshold: lowering the line pushes its edge down with it.
+- **Send to review**: click an item on the belt (a press on an item that then moves drags the line as usual).
 - **Top-k** (C11, sandbox): ↑ / ↓ change k by 1, Shift by 5.
 - **Charts**: Tab switches the chart tab where charts are tabbed.
 - **Pause**: Esc or P (and the pause button). **Space / Enter** press the default button of whatever overlay panel is visible (start, briefing, results, pause); during play Space does nothing (no accidental pauses). Arrow keys move the focus between the buttons of a visible panel (as in `fish-frenzy`).
@@ -173,7 +173,7 @@ Three levels, picked on the start screen and in the results / failure dialog (pr
 The split-screen joystick of the `ivan` games does not fit a game with one vertical control, so the touch scheme is:
 
 - **One finger on the belt or the pile drags the threshold relatively**: the line moves by the finger's vertical movement from where it touched down (no jump to the finger), so the thumb does not cover the items it is judging. Dragging the handle itself is absolute.
-- A **large handle** (at least 44 × 44 CSS px) at the right edge; when the review desk is unlocked a second handle sits on the left edge of the pile for the review band, so the two never overlap.
+- A **large handle** (at least 44 × 44 CSS px) at the right edge; when the review desk is unlocked a second handle sits in a column at the left edge of the belt area for the review band, so the two never overlap. Dragging it is absolute.
 - **Tap an item** = send it to review (with the review desk); a tap is a touch that moved less than 8 px.
 - On phones the Start button requests fullscreen (`requestFullscreen` with `{ navigationUI: 'hide' }` and the webkit fallback, in try/catch; iPhone Safari stays windowed and still works). Page scroll and zoom are blocked on the play area (`touch-action: none`).
 - The pause button is in the HUD, top right. Leaving the tab or switching apps pauses the game; on phones the first tap after returning restores fullscreen.
@@ -193,14 +193,14 @@ C01 is guided by **coach marks**: a small bubble with an arrow pointing at the t
 5. After 40 items: "Precision: of everything you flagged, how much was really spam. Recall: of all the spam, how much you caught. Move the line and watch them pull against each other." (points at the bars)
 6. "Both live in the pile: tap a bar to see which part of it." (end)
 
-Every later contract that introduces a new element (the goal chip C02, outbreak meter C03, F1 C04, amounts C05, review band C08, drift monitor C09, top-k C11) has one or two coach marks the first time. Coach marks seen are remembered (05 §5); the pause dialog has no "replay tutorial", but replaying C01 always shows them.
+Every later contract that introduces a new element (the goal chip C02, outbreak meter C03, F1 C04, amounts C05, accuracy C06, the base rate shift C07, review band C08, drift monitor C09, top-k C11) has one or two coach marks the first time. Coach marks seen are remembered (05 §5); the pause dialog has no "replay tutorial", but replaying C01 always shows them.
 
 ## 14. Debug cheats
 
 Keyboard only, during play or on the map, never mentioned in the in-game help, each showing a short banner of what it did:
 
 - `1`–`9`, `0`, `-`, `=` on the map: open contract C01–C12 directly (unlock it).
-- `M`: +$1 000. `U`: buy every upgrade. `R` (during play): toggle showing the true class on the belt. `F` (during play): finish the contract now with the current results (the hindsight-best is then computed on the items decided so far). `I` (during play): start the contract's next incident now. Until the Lab (I05) and incidents exist, `U` and `I` only say so.
+- `M`: +$1 000. `U`: buy every upgrade. `R` (during play): toggle showing the true class on the belt. `F` (during play): finish the contract now with the current results (the hindsight-best is then computed on the items decided so far). `I` (during play): start the contract's next incident with the next item to arrive (the items still to come are made again with the moved schedule). `U` takes effect from the next contract.
 
 Once any cheat is used in a contract run, that run is marked as cheated: it never updates stars or bests and pays only its own money, no fee and no quiz bonus (the cheats are for testing). `M` and `U` mark the whole campaign save as `cheated: true`, shown as a small "test save" tag on the map.
 

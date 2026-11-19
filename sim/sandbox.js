@@ -3,7 +3,8 @@
 // ============================================================
 // AI Precision Recall Lab — the sandbox (spec 01 §7): the play screen without money, goals or an end. Its
 // knobs (scenario, base rate, separation d', calibrated scores, the true class on the belt, speed, prices,
-// formula view, the threshold) make the model; the stream is endless (Stream.endless) and always made with
+// formula view, the review band with its lower edge, the threshold) make the model (the review band: a desk of
+// level REVIEW_SANDBOX_LEVEL, sim/review.js); the stream is endless (Stream.endless) and always made with
 // the current model. A knob that changes the model regenerates the validation set from the same seed, so
 // the curves morph smoothly as a slider moves, and refits Platt scaling; items already made keep their score.
 // Generate 1 000 fills the pile at once (and widens the window to 1 000), Clear empties belt and pile, Step
@@ -19,7 +20,7 @@ const Sandbox = (() => {
     const sc = SCENARIOS.abstract;
     return {
       scenario: 'abstract', prevalence: sc.prevalence, dPrime: sc.dPrime, calibrated: false, showClass: false,
-      speed: 1, prices: Object.assign({}, SANDBOX_PRICES), formulas: false, threshold: 0.5
+      speed: 1, prices: Object.assign({}, SANDBOX_PRICES), formulas: false, review: false, reviewLow: 0.35, threshold: 0.5
     };
   }
 
@@ -41,8 +42,22 @@ const Sandbox = (() => {
       speed: SANDBOX_SPEEDS.includes(k.speed) ? k.speed : d.speed,
       prices,
       formulas: k.formulas === true,
+      review: k.review === true,
+      reviewLow: clamp(round2(num(k.reviewLow, d.reviewLow)), 0, 1),
       threshold: clamp(round2(num(k.threshold, d.threshold)), 0, 1)
     };
+  }
+
+  // The review band (01 §7): a desk of level REVIEW_SANDBOX_LEVEL whose band starts at the knobs' reviewLow
+  // (never above the threshold); off, the desk goes and the items already sent are decided by the model again.
+  function applyReview() {
+    const run = State.run, k = run.knobs;
+    if (k.review && !State.review) Review.attach(run, REVIEW_SANDBOX_LEVEL, Math.min(k.reviewLow, State.threshold));
+    if (k.review && State.review) State.review.last = run.clock;
+    if (!k.review && State.review) {
+      Review.detach(run);
+      for (const it of State.belt) it.sent = false;
+    }
   }
 
   // a base rate on the log slider, kept to two significant digits (0.5 %, 4.2 %, 25 %)
@@ -76,8 +91,10 @@ const Sandbox = (() => {
     State.pile = [];
     State.pileVersion++;
     State.threshold = k.threshold;
+    Review.detach(run);
     rebuild();
     run.next = run.source();
+    applyReview();
     return run;
   }
 
@@ -124,7 +141,7 @@ const Sandbox = (() => {
   // the threshold's number moves to the other axis (calibration changes what a number means, not the ranking).
   function set(name, value) {
     const run = State.run, old = run.knobs;
-    const k = sanitize(Object.assign({}, old, { [name]: value, threshold: State.threshold }));
+    const k = sanitize(Object.assign({}, old, { threshold: State.threshold, reviewLow: State.review ? State.review.low : old.reviewLow }, { [name]: value }));
     if (name === 'scenario' && k.scenario !== old.scenario) {
       const sc = SCENARIOS[k.scenario];
       k.prevalence = sc.prevalence;
@@ -134,10 +151,14 @@ const Sandbox = (() => {
     if (k.scenario !== old.scenario || k.prevalence !== old.prevalence || k.dPrime !== old.dPrime) rebuild();
     if (k.calibrated !== old.calibrated) {
       const t = State.threshold;
-      State.threshold = t <= 0 || t >= 1 ? t : k.calibrated ? Model.calibrate(t, run.platt) : Model.rawThreshold(t, run.platt);
+      const move = (v) => (v <= 0 || v >= 1 ? v : k.calibrated ? Model.calibrate(v, run.platt) : Model.rawThreshold(v, run.platt));
+      State.threshold = move(t);
       k.threshold = State.threshold;
+      k.reviewLow = Math.min(move(k.reviewLow), State.threshold);
+      if (State.review) State.review.low = k.reviewLow;
       State.pileVersion++;
     }
+    applyReview();
     reprice();
     return k;
   }
@@ -172,6 +193,7 @@ const Sandbox = (() => {
     run.window = PILE_WINDOW;
     run.totals = Metrics.emptyCounts();
     run.count = 0;
+    if (State.review) Object.assign(State.review, { busy: 0, progress: 0, last: run.clock, reviewed: 0, full: 0, sent: 0 });
     if (run.next) { run.next.at = run.clock + run.next.gap; run.lastAt = run.next.at; }
   }
 

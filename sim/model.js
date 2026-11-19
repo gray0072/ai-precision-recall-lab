@@ -4,8 +4,9 @@
 // AI Precision Recall Lab — the score model (spec 02 §2.1, §2.3). Synthetic binormal scores (ADR-0002):
 //   z | y = 0 ~ N(−d'/2, 1),  z | y = 1 ~ N(+d'/2 − drift, 1),  s = σ(γ·z + β), rounded to 0.01 in [0.01, 0.99].
 // Here: the effective d', quantization, the true posterior P(y = 1 | z), the mapping of a posterior back to
-// the raw score axis (the ghost line on Easy), Platt scaling fitted by Newton's method, the theoretical AUC.
-// A "model" is a plain object { dPrime, prevalence, gamma, beta }. No drawing, no DOM, no sound.
+// the raw score axis (the ghost line on Easy), Platt scaling fitted by Newton's method, the theoretical AUC,
+// and what the Lab's upgrades do: the d' bonus of a family, the review desk level, calibration and the monitor.
+// A "model" is a plain object { dPrime, prevalence, gamma, beta, drift? }. No drawing, no DOM, no sound.
 // Used by sim/stream.js, sim/contract.js, the sandbox, the Lab cards and the tests.
 // ============================================================
 
@@ -32,9 +33,18 @@ const Model = (() => {
   // the raw score of a logit with the model's temperament γ, β: changes no ranking, only what a number means
   function rawScore(z, m) { return quantize(sigmoid(m.gamma * z + m.beta)); }
 
-  // The true posterior. With equal variances the likelihood ratio N(z; d'/2, 1) / N(z; −d'/2, 1) = e^(d'z),
-  // so logit P(y = 1 | z) = logit(π) + d'·z: exactly logistic in z. This is why Platt scaling fits so well here.
-  function posterior(z, m) { return sigmoid(logit(m.prevalence) + m.dPrime * z); }
+  // The true posterior. With equal variances the likelihood ratio N(z; μ₁, 1) / N(z; μ₀, 1) is e^((μ₁ − μ₀)z −
+  // (μ₁² − μ₀²)/2), so logit P(y = 1 | z) = logit(π) + (μ₁ − μ₀)·z − (μ₁² − μ₀²)/2: exactly logistic in z. Without
+  // drift μ₁ = −μ₀ = d'/2 and it is logit(π) + d'·z. This is why Platt scaling fits so well here. m.drift (02 §6.2)
+  // moves the positives' mean down.
+  function lrParts(m) {
+    const mu1 = logitMean(1, m.dPrime, m.drift || 0), mu0 = logitMean(0, m.dPrime);
+    return { slope: mu1 - mu0, shift: (mu1 * mu1 - mu0 * mu0) / 2 };
+  }
+  function posterior(z, m) {
+    const q = lrParts(m);
+    return sigmoid(logit(m.prevalence) + q.slope * z - q.shift);
+  }
   // the posterior of a raw score: undo the temperament, z = (logit(s) − β) / γ
   function posteriorOfScore(s, m) { return posterior((logit(clamp(s, SCORE_MIN, SCORE_MAX)) - m.beta) / m.gamma, m); }
 
@@ -43,8 +53,9 @@ const Model = (() => {
   function scoreForPosterior(p, m) {
     if (p <= 0) return 0;
     if (p >= 1) return 1;
-    if (m.dPrime <= 0) return m.prevalence >= p ? 0 : 1;
-    const z = (logit(p) - logit(m.prevalence)) / m.dPrime;
+    const q = lrParts(m);
+    if (q.slope <= 0) return m.prevalence >= p ? 0 : 1;
+    const z = (logit(p) - logit(m.prevalence) + q.shift) / q.slope;
     const s = sigmoid(m.gamma * z + m.beta);
     return clamp(Math.ceil(s * 100 - 1e-9) / 100, 0, 1);   // the lowest grid score whose posterior is ≥ p
   }
@@ -108,7 +119,24 @@ const Model = (() => {
     return 1;
   }
 
+  // ---------- the Lab's upgrades (01 §5, 03 §3): what a list of owned upgrade ids does to a model ----------
+  // the d' bonus for a scenario family: More data for every family, the features for their own
+  function bonusOf(owned, family) {
+    let b = 0;
+    for (const u of UPGRADES) if (u.kind === 'dprime' && owned.includes(u.id) && (u.family === null || u.family === family)) b += u.dPrime;
+    return Math.round(b * 100) / 100;
+  }
+  // the highest review desk level owned (0 = none)
+  function deskLevelOf(owned) {
+    let l = 0;
+    for (const u of UPGRADES) if (u.kind === 'review' && owned.includes(u.id)) l = Math.max(l, u.level);
+    return l;
+  }
+  // an upgrade of this kind is owned ('calibration', 'monitor')
+  function hasKind(owned, kind) { return UPGRADES.some((u) => u.kind === kind && owned.includes(u.id)); }
+
   return {
+    bonusOf, deskLevelOf, hasKind,
     effectiveDPrime, of, quantize, logitMean, rawScore, posterior, posteriorOfScore, scoreForPosterior,
     theoreticalAuc, plattExpected, fitPlatt, calibrate, rawThreshold
   };

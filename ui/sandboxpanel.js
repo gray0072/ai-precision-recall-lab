@@ -3,7 +3,7 @@
 // ============================================================
 // AI Precision Recall Lab — the sandbox's knobs (spec 01 §7): a docked side panel on desktops, a drawer on
 // phones. Scenario (with its drawings), base rate (a logarithmic slider), separation d' with the AUC it gives,
-// calibrated scores, the true class on the belt, formula view, speed, pause the belt / step one item, the
+// calibrated scores, the true class on the belt, formula view, the review band, speed, pause the belt / step one item, the
 // prices of the four outcomes (the profit curve and, with calibration, the cost-optimal ghost line),
 // Generate 1 000 and Clear. Every change goes through Sandbox.set and is remembered as prLab.sandbox.v1.
 // Used by game.js (build, open / close, save).
@@ -83,6 +83,7 @@ const SandboxPanel = (() => {
     toggles.appendChild(toggle('sbCal', tr('Calibrated scores')));
     toggles.appendChild(toggle('sbShow', tr('Show true class')));
     toggles.appendChild(toggle('sbFormulas', tr('Formula view')));
+    toggles.appendChild(toggle('sbReview', tr('Review band')));
     panel.appendChild(toggles);
 
     panel.appendChild(slider('sbSpeed', tr('Speed'), 0, SANDBOX_SPEEDS.length - 1, 1));
@@ -127,6 +128,7 @@ const SandboxPanel = (() => {
     $('sbCal').addEventListener('click', () => change('calibrated', !State.run.knobs.calibrated));
     $('sbShow').addEventListener('click', () => change('showClass', !State.run.knobs.showClass));
     $('sbFormulas').addEventListener('click', () => change('formulas', !State.run.knobs.formulas));
+    $('sbReview').addEventListener('click', () => change('review', !State.run.knobs.review));
     $('sbFreeze').addEventListener('click', () => { State.run.frozen = !State.run.frozen; render(); });
     $('sbStep').addEventListener('click', () => { Sandbox.step(); });
     prices.querySelectorAll('input').forEach((input) => input.addEventListener('change', () => {
@@ -179,6 +181,8 @@ const SandboxPanel = (() => {
     press('sbCal', k.calibrated);
     press('sbShow', k.showClass);
     press('sbFormulas', k.formulas);
+    press('sbReview', k.review);
+    $('sbReview').title = tr('A band under the threshold whose items go to people: always right, but only {r} per second', { r: REVIEW_RATE[REVIEW_SANDBOX_LEVEL - 1] });
     press('sbFreeze', !!run.frozen);
     panel.querySelectorAll('[data-price]').forEach((input) => {
       if (document.activeElement !== input) input.value = k.prices[input.dataset.price];

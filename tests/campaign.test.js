@@ -228,3 +228,62 @@ test('the campaign: a broken save is sanitized field by field; New campaign eras
   assert.equal(Campaign.played('C01'), false);
   assert.equal(Campaign.exists, true);
 });
+
+test('the Lab: opens after C01, buys with money and prerequisites, keeps upgrades in the save', () => {
+  const L = load();
+  const store = memory();
+  L.Campaign.init(store);
+  assert.equal(L.Campaign.labOpen(), false);
+  const events = [];
+  L.GameEvents.on('purchase', (e) => events.push(e.upgrade));
+  L.Campaign.data.contracts.C01 = { medium: { stars: 1, best: 10 } };
+  assert.equal(L.Campaign.labOpen(), true);
+  L.Campaign.data.money = 1000;
+  assert.equal(L.Campaign.upgradeState('U-data-2'), 'locked', 'needs More data I');
+  assert.equal(L.Campaign.buy('U-data-2'), false);
+  assert.equal(L.Campaign.buy('U-data-1'), true);
+  assert.equal(L.Campaign.money, 1000 - L.UPGRADE_PRICES['U-data-1']);
+  assert.equal(L.Campaign.upgradeState('U-data-1'), 'bought');
+  assert.equal(L.Campaign.buy('U-data-1'), false, 'once');
+  assert.equal(L.Campaign.upgradeState('U-data-3'), 'locked');
+  assert.equal(L.Campaign.upgradeState('U-review-1'), 'poor', '$700 left, the desk costs $800');
+  assert.deepEqual(events, ['U-data-1']);
+  // the save keeps it; unknown ids are dropped on load
+  const saved = JSON.parse(JSON.stringify(store.box.value));
+  saved.upgrades.push('U-nonsense');
+  L.Campaign.init(memory(saved));
+  assert.deepEqual(L.Campaign.upgrades(), ['U-data-1']);
+  // the cheat U: everything, and a test save
+  L.Campaign.buyAll();
+  assert.equal(L.Campaign.upgrades().length, L.UPGRADES.length);
+  assert.equal(L.Campaign.cheated, true);
+});
+
+test('upgrades act on the run: the family bonus on d\', calibration, the monitor, the desk', () => {
+  const L = load();
+  const { Model, Contract, CONTRACTS } = L;
+  assert.equal(Model.bonusOf(['U-data-1', 'U-data-2', 'U-feat-text'], 'text'), 0.9);
+  assert.equal(Model.bonusOf(['U-data-1', 'U-feat-text'], 'sensor'), 0.25);
+  assert.equal(Model.deskLevelOf(['U-review-1', 'U-review-2']), 2);
+  const base = Contract.start(CONTRACTS.C02, { difficulty: 'medium', seed: 4 });
+  assert.equal(base.key, 's');
+  assert.equal(base.monitor, null);
+  assert.equal(base.deskLevel, 0);
+  const all = Contract.start(CONTRACTS.C02, { difficulty: 'medium', seed: 4, upgrades: L.UPGRADES.map((u) => u.id) });
+  assert.ok(Math.abs(all.model.dPrime - (base.model.dPrime + 0.75 + 0.4)) < 1e-9);
+  assert.ok(all.curves.auc > base.curves.auc + 0.03, 'More data separates the humps: AUC up');
+  assert.equal(all.key, 'p');
+  assert.ok(all.monitor);
+  assert.equal(all.deskLevel, 3);
+  assert.equal(all.ghostT, Math.ceil(Contract.ghostPStar(CONTRACTS.C02.prices) * 100 - 1e-9) / 100, 'Medium shows p* with Calibration');
+  // the theoretical AUC moves by Φ(d'/√2): More data I on C02 (d' 2.2) is +0.02
+  assert.ok(Math.abs(Model.theoreticalAuc(2.45) - Model.theoreticalAuc(2.2) - 0.022) < 0.005);
+});
+
+test('a ★★ target per level; Act 2 contracts are complete', () => {
+  const { CONTRACTS, Contract } = load();
+  assert.equal(Contract.targetOf(CONTRACTS.C02, 'hard'), CONTRACTS.C02.target);
+  assert.equal(Contract.targetOf(CONTRACTS.C09, 'hard'), CONTRACTS.C09.target.hard);
+  for (const id of ['C06', 'C07', 'C08', 'C09']) assert.ok(!CONTRACTS[id].soon, id);
+  assert.equal(Contract.goalTarget(CONTRACTS.C06.goal, 'hard'), CONTRACTS.C06.goal.min, 'the KPI is fixed');
+});

@@ -3,8 +3,9 @@
 // ============================================================
 // AI Precision Recall Lab — the briefing before a contract (spec 01 §3.1, 04 §3): the client's avatar and
 // message; the terms (the price of each outcome in the outcome colours, the number of items and the speed, the
-// goal with the difficulty's shift, the outbreak allowance, the stars' rules, the fee); the model card (AUC of
-// the effective d', raw scores, the base rate in words); the quick question (03 §5): one answer, then the
+// goal with the difficulty's shift, the outbreak allowance, the incidents to expect, the review desk, the stars'
+// rules with the level's ★★ target, the fee); the model card (AUC of the effective d' with the Lab's bonus, raw or
+// calibrated scores, the drift monitor, the base rate in words); the quick question (03 §5): one answer, then the
 // explanation; a right answer earns QUIZ_BONUS once per contract, paid on completion. Start / Back to the map.
 // Reads Campaign, CONTRACTS, QUIZ; game.js passes what Start and Back do.
 // ============================================================
@@ -91,11 +92,22 @@ const Briefing = (() => {
     if (def.outbreak) {
       row(list, tr('Outbreak'), tr('the contract fails at {n} missed positives (FN)', { n: Contract.outbreakAllowance(def, difficulty) }));
     }
-    if (sc.amounts) row(list, tr('Amounts'), tr('every payment shows its amount; a missed fraud costs all of it'));
+    if (def.prices === 'fraud') row(list, tr('Amounts'), tr('every payment shows its amount; a missed fraud costs all of it'));
+    for (const inc of def.incidents || []) {
+      row(list, tr('Incident'), tr('{name} around item {at}: {note}', { name: tr(inc.name), at: inc.at, note: tr(inc.note) }) +
+        (diff.warnS ? ' ' + tr('(a warning {s} s ahead)', { s: diff.warnS }) : ' ' + tr('(no warning on Hard)')));
+    }
+    const owned = Campaign.upgrades();
+    const level = Contract.deskLevel(def, difficulty, Model.deskLevelOf(owned));
+    if (level) {
+      const lent = def.lend && def.lend.review;
+      row(list, tr('Review desk'), tr('level {lvl}{lent}: people decide the items in the band under the threshold, always right, {fee} each, one every {s} s',
+        { lvl: ['', 'I', 'II', 'III'][level], lent: lent ? ' ' + tr('(lent by the client)') : '', fee: Hud.money(-REVIEW_FEE), s: (1 / REVIEW_RATE[level - 1]).toFixed(1) }));
+    }
     row(list, tr('Bankrupt'), tr("the contract fails if its money falls below {m}", { m: Hud.money(-def.fee) }));
     const stars = el('span', 'starRules');
     stars.appendChild(el('span', '', '★ ' + (def.goal ? tr('goal met') : tr('completed'))));
-    stars.appendChild(el('span', '', '★★ ' + tr('profit ≥ {m}', { m: Hud.money(def.target) })));
+    stars.appendChild(el('span', '', '★★ ' + tr('profit ≥ {m}', { m: Hud.money(Contract.targetOf(def, difficulty)) })));
     stars.appendChild(el('span', '', '★★★ ' + tr('profit ≥ {p} % of the best fixed threshold in hindsight', { p: Math.round(STAR3_SHARE * 100) })));
     row(list, tr('Stars'), stars);
     const rec = Campaign.record(id, difficulty);
@@ -107,11 +119,19 @@ const Briefing = (() => {
     // the model card and the quick question
     const right = el('div', 'brBox');
     right.appendChild(el('h2', '', tr('Model card')));
-    const model = Contract.modelOf(def, difficulty);
+    const bonus = Model.bonusOf(owned, sc.family);
+    const model = Contract.modelOf(def, difficulty, bonus);
     const mc = el('div', 'termList');
     row(mc, tr('Model'), tr(sc.name));
-    row(mc, 'AUC', Model.theoreticalAuc(model.dPrime).toFixed(2) + (diff.dPrime ? ' ' + tr('({d} on this level)', { d: (diff.dPrime > 0 ? '+' : '−') + Math.abs(diff.dPrime).toFixed(1) + ' d′' }) : ''));
-    row(mc, tr('Scores'), tr('raw model scores, not calibrated probabilities'));
+    const notes = [];
+    if (bonus) notes.push(tr('Lab +{d}', { d: bonus.toFixed(2) + ' d′' }));
+    if (diff.dPrime) notes.push(tr('{d} on this level', { d: (diff.dPrime > 0 ? '+' : '−') + Math.abs(diff.dPrime).toFixed(1) + ' d′' }));
+    row(mc, 'AUC', Model.theoreticalAuc(model.dPrime).toFixed(2) + (notes.length ? ' (' + notes.join(', ') + ')' : ''));
+    row(mc, tr('Scores'), Model.hasKind(owned, 'calibration')
+      ? tr('calibrated probabilities p (Platt scaling, fitted on the validation set at the start)')
+      : tr('raw model scores, not calibrated probabilities'));
+    const monitor = Model.hasKind(owned, 'monitor') || (def.lend && def.lend.monitor);
+    if (monitor) row(mc, tr('Drift monitor'), tr('PSI of the scores against the validation set, an alert above {a}, Retrain once{lent}', { a: PSI_ALERT.toFixed(1), lent: def.lend && def.lend.monitor ? ' ' + tr('(lent by the client)') : '' }));
     row(mc, tr('Base rate'), tr(sc.baseRate, { n: Math.round(1 / def.prevalence) }));
     if (diff.tint) row(mc, tr('Easy'), tr('a faint tint gives away the true class; a dashed line shows the best threshold for the prices'));
     right.appendChild(mc);

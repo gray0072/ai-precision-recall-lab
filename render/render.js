@@ -3,11 +3,12 @@
 // ============================================================
 // AI Precision Recall Lab — the play canvas (spec 04 §4): its size (devicePixelRatio-aware, capped by
 // canvasScale), the geometry of its parts (score axis, belt, gate, pile, the threshold handle at the right
-// edge), the mapping between a score and a height, hit-testing for drags, the animation clock of the reveals
+// edge, the review band's handle at the left edge while there is a desk), the mapping between a score and a
+// height, hit-testing for drags and for taps on items, the animation clock of the reveals
 // and the frame: render/belt.js and render/pile.js draw the parts. The screen layouts (desktop, phone
 // landscape, phone portrait, 04 §4.2) are chosen here and applied as a class on #play; styles.css does the rest.
 // Reads State; never changes it. Used by game.js (resize, frame), core/input.js through game.js (hit-testing)
-// and ui/coach.js (where an item or the handle is on the page).
+// and ui/coach.js (where an item or a handle is on the page).
 // ============================================================
 
 const Render = (() => {
@@ -49,7 +50,10 @@ const Render = (() => {
     const small = W < 600;
     G.handleW = small ? 54 : 64;                 // at least 44 CSS px (04 §10)
     G.handleX = W - G.handleW;
-    G.axisX = small ? 28 : 34;
+    // with a review desk the band's handle has a column of its own at the left edge (01 §11.2), so the two
+    // handles never overlap and the thumb on one never covers the other
+    G.bandW = State.review ? (small ? 46 : 52) : 0;
+    G.axisX = G.bandW + (small ? 28 : 34);
     G.top = small ? 20 : 24;                     // room for the badge of an item at score 1
     G.bottom = H - (small ? 12 : 16);
     G.beltX0 = G.axisX + 4;
@@ -69,8 +73,23 @@ const Render = (() => {
 
   // the handle's column at the right edge: a press there drags the line absolutely (it jumps to the pointer)
   function onHandle(x) { return x >= G.handleX - 6; }
-  // the belt and the pile (left of the handle's column)
-  function onPlayArea(x, y) { return x >= 0 && x < G.handleX - 6 && y >= 0 && y <= G.H; }
+  // the review band's handle: the column at the left edge, while there is a desk
+  function onBandHandle(x) { return !!State.review && G.bandW > 0 && x < G.bandW; }
+  // the belt and the pile (between the band's column and the handle's)
+  function onPlayArea(x, y) { return x >= G.bandW && x < G.handleX - 6 && y >= 0 && y <= G.H; }
+  // the item riding the belt under a point (a tap sends it to the desk); the nearest one within reach, or null
+  function itemAt(x, y) {
+    const run = State.run;
+    if (!run || x > G.gateX) return null;
+    const reach = Math.max(G.itemSize * 0.75, 18);
+    let best = null, bestD = reach;
+    for (const it of State.belt) {
+      const ix = G.beltX0 + clamp(Stream.progress(it), 0, 1) * (G.gateX - G.beltX0), iy = yOf(it[run.key]);
+      const d = Math.hypot(ix - x, iy - y);
+      if (d < bestD) { bestD = d; best = it; }
+    }
+    return best;
+  }
   // a score's worth of pixels: a relative drag moves the line by Δy / span
   function span() { return G.bottom - G.top; }
 
@@ -93,6 +112,7 @@ const Render = (() => {
     Belt.drawGate(ctx, G, lastGate, time);
     Belt.drawItems(ctx, G, run, time);
     Belt.drawFlights(ctx, G, run, time);
+    Belt.drawBand(ctx, G, run);
     Belt.drawThreshold(ctx, G, run);
     Belt.drawTags(ctx, G, run, time);
     placeSlider();
@@ -119,9 +139,13 @@ const Render = (() => {
     return pagePoint(G.beltX0 + p * (G.gateX - G.beltX0), yOf(item[State.run.key]));
   }
   function handlePoint() { return pagePoint(G.handleX + (G.W - G.handleX) / 2, yOf(State.threshold)); }
+  function bandPoint() {
+    const d = State.review;
+    return pagePoint(G.bandW / 2, yOf(d ? Review.lowOf(d, State.threshold) : 0));
+  }
 
   return {
-    G, ctx, layoutName, resize, yOf, valueAt, onHandle, onPlayArea, span, reducedMotion, sinceGate, frame,
-    itemPoint, handlePoint, get time() { return time; }
+    G, ctx, layoutName, resize, yOf, valueAt, onHandle, onBandHandle, onPlayArea, itemAt, span, reducedMotion, sinceGate, frame,
+    itemPoint, handlePoint, bandPoint, get time() { return time; }
   };
 })();

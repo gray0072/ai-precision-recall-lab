@@ -1,6 +1,6 @@
 # 03 — Content
 
-Content tables. In code each table is a file in `data/` (05 §2) with plain declarations; ids are stable. Money and targets are tuned by `tools/balance-check.js` (05 §7; Act 1 in I04, the rest in I05–I06): ★★★ must be reachable on at least 90 % of the streams on every level (the hindsight-best meets the goal and the ★★ target), so the ★★ target sits near the 10th percentile of the hindsight-best profit on Hard; and t = 0.5 must not win ★★★ on C02, C03 and C05. All texts below are the English source; the translations live in `data/lang-ru.js` / `data/lang-sv.js` (04 §8).
+Content tables. In code each table is a file in `data/` (05 §2) with plain declarations; ids are stable. Money and targets are tuned by `tools/balance-check.js` (05 §7; Act 1 in I04, the rest in I05–I06): ★★★ must be reachable on at least 90 % of the streams on every level (the hindsight-best meets the goal and the ★★ target), so the ★★ target sits near the 10th percentile of the hindsight-best profit on Hard (or, per level, near each level's: `target: { easy, medium, hard }`); and t = 0.5 must not win ★★★ on C02, C03 and C05. From Act 2 on the check runs twice: with no upgrades and with the upgrades a normal campaign can afford by then; a bot with the drift monitor retrains at the alert. All texts below are the English source; the translations live in `data/lang-ru.js` / `data/lang-sv.js` (04 §8).
 
 ## 1. Scenarios
 
@@ -35,10 +35,18 @@ Act 1 as tuned in I04 (the starting values were +2 / −4 / −1 / 0, ★★ $30
 
 | Id | Name | Scenario | Teaches | `π` | `d'` | Items | Rate | Prices | Goal | Special | Fee | ★★ target |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| C06 | The accuracy trap | fraud | accuracy on rare classes | 0.02 | 2.0 | 300 | 1.5 | fraud prices | Accuracy ≥ 0.98 (the client's KPI) | the results also show MCC and balanced accuracy | $300 | $200 |
-| C07 | Flu season | fever | precision depends on the base rate | 0.04 → 0.20 | 2.0 | 320 | 1.4 | +5 / −1 / −30 / 0 | Recall ≥ 0.85 | base rate shift at item 120; outbreak allowance 6 | $350 | $60 |
-| C08 | Comment patrol | moderation | triage: a human review band | 0.15 | 1.6 | 300 | 1.5 | +3 / −6 / −6 / 0, review −$1 | — | review desk II lent for free | $350 | $150 |
-| C09 | Spam wave | spam | drift, monitoring, retraining | 0.25 | 2.4 | 320 | 1.4 | +2 / −10 / −1 / 0 | Precision ≥ 0.90 | drift `shift` 1.2 at item 120; Drift monitor lent for free | $400 | $40 |
+| C06 | The accuracy trap | fraud | accuracy on rare classes | 0.02 | 2.2 | 400 | 1.5 | +30 / −2 / 0 / 0 (no amounts) | Accuracy ≥ 0.97, fixed on every level (the client's KPI) | the results also show MCC and balanced accuracy | $300 | $20 |
+| C07 | Flu season | fever | precision depends on the base rate | 0.04 → 0.20 | 2.0 | 320 | 1.4 | +8 / −1 / −30 / 0 | Recall ≥ 0.85 | base rate shift at item 120; outbreak allowance 6 | $350 | $120 |
+| C08 | Comment patrol | moderation | triage: a human review band | 0.15 | 1.6 | 300 | 1.5 | +3 / −6 / −6 / +1, review −$1 | — | review desk II lent for free | $350 | $115 / $85 / $60 |
+| C09 | Spam wave | spam | drift, monitoring, retraining | 0.25 | 2.4 | 400 | 1.4 | +5 / −10 / −1 / 0 | Precision ≥ 0.85 | drift `shift` 2.0 at item 80; Drift monitor lent for free | $400 | $120 / $80 / $20 |
+
+★★ targets with three values are per level (Easy / Medium / Hard).
+
+Act 2 as tuned in I05 (the starting values were: C06 fraud prices, d′ 2.0, 300 items, Accuracy ≥ 0.98, ★★ $200; C07 +5 / −1 / −30 / 0, ★★ $60; C08 +3 / −6 / −6 / 0, ★★ $150; C09 320 items, +2 / −10 / −1 / 0, Precision ≥ 0.90, drift 1.2 at item 120, ★★ $40). Why:
+- **C06.** With fraud prices one missed big payment (up to $5 000) bankrupts the run, and the accuracy goal forces a high threshold that misses some. So on ≥ 10 % of the streams no fixed threshold could finish, and no ★★ target could work. C06 is about accuracy, not amounts, so it pays a bounty: +$30 per fraud stopped, −$2 per blocked customer, nothing for a miss. "Flag nothing" now meets the goal on 97 % of the streams, earns $0 and never reaches ★★, which is the lesson. The KPI is fixed because Hard's +0.02 would make it 1.00, and 0.97 lets "flag nothing" through even with a few more frauds than average.
+- **C07.** After the flu season starts about 40 passengers are feverish, and +$5 each left the best profit on Hard near $0. At +$8 the 10th percentile is above $130 on every level.
+- **C08.** At d′ 1.6 every model decision was a fine or nothing, so even the best band lost money. A fine comment left up now earns $1 (ads). People's review (−$1 instead of the outcome's price) then beats the model for posteriors between about 0.29 and 0.56. The best fixed band (about 0.14 wide) earns about 13 % more than no band, just more than the 10 % margin of ★★★.
+- **C09.** PSI could not raise the alert within the old drift's 200 items ([ADR-0005](../adr/0005-psi-short-window.md)), and without a retrain the spam wave's missed spam made every fixed threshold lose money. A stronger, earlier drift in a longer contract, +$5 per spam caught and a softer precision goal give a player who retrains at the alert about 150 good items. Without a retrain the median profit is negative.
 
 ### Act 3 — Scale-up
 
@@ -69,7 +77,7 @@ C12's star rules: ★ needs every phase's goal met; the hindsight-best is comput
 
 ## 3. Upgrades
 
-The Lab opens after C01. Effects add up; `d'` bonuses apply to every contract of the family, including replays.
+The Lab opens after C01. Effects add up; `d'` bonuses apply to every contract of the family, including replays. Prices and `d'` bonuses are tuning values in `constants.js` (`UPGRADE_PRICES`, `UPGRADE_DATA_DPRIME`, `UPGRADE_FEATURE_DPRIME`); the texts are in `data/upgrades.js`. A lent desk or monitor (C08, C09) is used when it is better than the one bought.
 
 | Id | Name | Effect | Price | Needs |
 |---|---|---|---|---|
@@ -110,7 +118,7 @@ The cheat sheet screen (04 §3) shows these cards. Every card has: **name** (wit
 | G-cost | Cost-sensitive threshold | flag if p ≥ (V_TN − V_FP) / ((V_TP − V_FN) + (V_TN − V_FP)) | The best threshold comes from the prices of mistakes. | **Expensive misses → low bar; expensive false alarms → high bar.** With FP = $10, FN = $1, TP = +$2: p* = 0.77. | Needs calibrated scores. With amounts, the best bar differs per item. | Card Watch: p* ≈ 0.09 for a $60 payment, 0.02 for $1 000. |
 | G-errors | Type I and Type II errors | Type I = FP, Type II = FN | The statisticians' names for the two mistakes. | **The boy who cried wolf:** the villagers make both — first they believe a false alarm (Type I), then ignore a real one (Type II). | α (the Type I rate) is the FPR; power = 1 − β is the recall. | |
 | G-review | Review band (abstain, triage) | model decides outside [t_review, t); people decide inside | Let the model act only where it is sure. | **Traffic light:** green — pass, red — block, amber — ask a human. | People cost money and time; a full queue falls back on the model. | Comment Patrol: the band 0.35–0.65 takes 18 % of comments. |
-| G-drift | Data drift | PSI = Σ (a − e) ln(a / e) over score bins | The data the model sees no longer looks like the data it learned from. | **The map is not the territory any more:** the live dot leaves the curve. PSI < 0.1 calm, > 0.2 act. | Score drift can be a base rate change or a real concept change; look before you retrain. | Spam wave: PSI 0.31 two minutes after the new tactic. |
+| G-drift | Data drift | PSI = Σ (a − e) ln(a / e) over score bins | The data the model sees no longer looks like the data it learned from. | **The map is not the territory any more:** the live dot leaves the curve. PSI < 0.1 calm, > 0.2 act. | Score drift can be a base rate change or a real concept change; look before you retrain. On a small window PSI is mostly noise: use few bins, enough items, and wait for it to stay high. | Spam wave: PSI 0.32 about 80 letters after the new tactic, over the last 80 letters in 5 bins. |
 | G-topk | Precision@k and recall@k | P@k = relevant in top-k / k; R@k = relevant in top-k / all relevant | Ranking metrics for search and RAG retrieval. | **k is a threshold per query.** Bigger k: recall ↑, precision ↓. | Recall@k needs to know all relevant documents — the hard part of evaluating search. | 5 relevant, top-10 holds 4: P@10 = 0.4, R@10 = 0.8. |
 | G-which | Which metric? | — | A decision helper. | A small flow: "False alarms expensive? → precision (or F0.5). Misses expensive? → recall (or F2). Both, equally? → F1. Rare positives? → PR AUC, not accuracy. Ranking quality, no threshold yet? → ROC AUC. Search / RAG? → precision@k, recall@k. Real prices known? → profit and the cost-optimal threshold." | | |
 

@@ -15,7 +15,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <meta name="theme-color" content="#0d1b2a">
-<link rel="stylesheet" href="styles.css?v=3">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -29,8 +29,12 @@
       <div class="chip" id="hudMoney" hidden></div>
       <div class="chip goalChip" id="hudGoal" hidden></div>
       <div class="chip" id="hudMeter" hidden></div>
+      <div class="chip" id="hudDesk" hidden></div>
+      <div class="chip psiChip" id="hudPsi" hidden><span id="hudPsiText"></span><canvas id="hudPsiChart"></canvas></div>
+      <div class="chip incidentChip" id="hudIncident" hidden></div>
     </div>
     <div class="hudRight">
+      <button class="chip retrainBtn" id="retrainBtn" hidden></button>
       <button class="round" id="knobsBtn" aria-controls="sandboxPanel" aria-expanded="false">☰</button>
       <button class="round" id="soundBtn">🔊</button>
       <button class="round" id="pauseBtn">⏸</button>
@@ -58,11 +62,13 @@
         <button class="btn toggle" data-tab="roc">ROC</button>
         <button class="btn toggle" data-tab="pr">PR</button>
         <button class="btn toggle" data-tab="profit" data-i18n>Profit</button>
+        <button class="btn toggle" data-tab="calib" data-i18n>Calibration</button>
       </div>
       <div class="charts">
         <div class="chart" data-chart="roc"><canvas></canvas></div>
         <div class="chart" data-chart="pr"><canvas></canvas></div>
         <div class="chart" data-chart="profit"><canvas></canvas></div>
+        <div class="chart" data-chart="calib"><canvas></canvas></div>
       </div>
     </div>
   </div>
@@ -110,8 +116,10 @@
       <p data-i18n>At the gate each item is revealed and drops onto the pile, and the pile <b>is</b> the confusion matrix: <b>TP</b> and <b>FP</b> above the line, <b>FN</b> and <b>TN</b> below it. Precision, recall and the ROC and PR curves follow every item.</p>
       <p data-i18n>Each client pays for right answers and fines you for mistakes. Find the line that earns the most and still meets the client's goal.</p>
       <p data-i18n>Point at a metric bar (or tap it) to see its formula with the live numbers and which cells of the matrix and which part of the pile it is made of. Tap it again for its cheat sheet card.</p>
+      <p data-i18n><b>The Lab</b> opens after the first contract: spend the money you earn on more data and better features (the two humps of the pile move apart), calibration (the badges become probabilities), a drift monitor (it warns when the scores stop looking like the data the model was tested on, and lets you retrain once per contract) and a review desk.</p>
+      <p data-i18n><b>Review desk:</b> a violet band under the threshold, with its own handle on the left. Items inside it go to people, who are always right but cost $1 each and can only take a few at a time; when the desk is full, the threshold decides. Tap or click an item on the belt to send it to the desk yourself.</p>
       <p data-i18n><b>Campaign:</b> a contract with at least one star opens the next. ★ goal met, ★★ also the profit target, ★★★ also 90 % of what the best fixed threshold would have earned on the same stream. Too many misses at the fever gate start an outbreak, and a contract whose money falls below its fee goes bankrupt: both end it early.</p>
-      <p data-i18n><b>Mouse and keyboard:</b> drag the handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (with Shift by 0.05), Page Up / Page Down by 0.10. Esc or P pauses.</p>
+      <p data-i18n><b>Mouse and keyboard:</b> drag the handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (with Shift by 0.05), Page Up / Page Down by 0.10. With the review desk, Q / A move the band's lower edge. Esc or P pauses.</p>
       <p data-i18n><b>Touch:</b> put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items. The large handle on the right can be dragged directly. On phones the game goes fullscreen.</p>
     </div>
   </div>
@@ -192,6 +200,19 @@
     </div>
   </div>
 
+  <div class="panel wide" id="labPanel" hidden>
+    <div class="mapTop">
+      <h1 data-i18n>The Lab</h1>
+      <div class="mapMoney"><span class="chip" id="labBalance"></span></div>
+    </div>
+    <p class="fine mapNote" id="labNote"></p>
+    <div id="labFamilies"></div>
+    <div id="labUpgrades"></div>
+    <div class="btnRow">
+      <button class="btn default" id="labBackBtn" data-i18n>Back</button>
+    </div>
+  </div>
+
   <div class="panel" id="placeholderPanel" hidden>
     <h1 id="placeholderTitle"></h1>
     <p class="tagline" id="placeholderText"></p>
@@ -201,46 +222,50 @@
   </div>
 </div>
 
-<script src="constants.js?v=4"></script>
-<script src="data/icons.js?v=3"></script>
+<script src="constants.js?v=5"></script>
+<script src="data/icons.js?v=4"></script>
 <script src="data/scenarios.js?v=2"></script>
-<script src="data/contracts.js?v=1"></script>
-<script src="data/glossary.js?v=1"></script>
+<script src="data/contracts.js?v=2"></script>
+<script src="data/upgrades.js?v=1"></script>
+<script src="data/glossary.js?v=2"></script>
 <script src="data/quiz.js?v=1"></script>
-<script src="data/coach.js?v=1"></script>
+<script src="data/coach.js?v=2"></script>
 <script src="core/utils.js?v=1"></script>
 <script src="core/rng.js?v=1"></script>
 <script src="core/events.js?v=1"></script>
 <script src="core/i18n.js?v=1"></script>
 <script src="core/storage.js?v=1"></script>
 <script src="core/audio.js?v=1"></script>
-<script src="core/input.js?v=2"></script>
+<script src="core/input.js?v=3"></script>
 <script src="core/cursor.js?v=1"></script>
 <script src="core/icons.js?v=1"></script>
 <script src="core/update.js?v=1"></script>
-<script src="sim/state.js?v=3"></script>
-<script src="sim/model.js?v=1"></script>
-<script src="sim/stream.js?v=3"></script>
-<script src="sim/metrics.js?v=2"></script>
-<script src="sim/contract.js?v=2"></script>
-<script src="sim/sandbox.js?v=1"></script>
-<script src="campaign.js?v=1"></script>
+<script src="sim/state.js?v=4"></script>
+<script src="sim/model.js?v=2"></script>
+<script src="sim/stream.js?v=4"></script>
+<script src="sim/metrics.js?v=3"></script>
+<script src="sim/contract.js?v=3"></script>
+<script src="sim/incidents.js?v=1"></script>
+<script src="sim/review.js?v=1"></script>
+<script src="sim/sandbox.js?v=2"></script>
+<script src="campaign.js?v=2"></script>
 <script src="art/palette.js?v=1"></script>
 <script src="art/items.js?v=1"></script>
 <script src="art/clients.js?v=1"></script>
-<script src="render/render.js?v=2"></script>
-<script src="render/belt.js?v=1"></script>
+<script src="render/render.js?v=3"></script>
+<script src="render/belt.js?v=2"></script>
 <script src="render/pile.js?v=1"></script>
-<script src="ui/screens.js?v=3"></script>
-<script src="ui/hud.js?v=2"></script>
+<script src="ui/screens.js?v=4"></script>
+<script src="ui/hud.js?v=3"></script>
 <script src="ui/livepanel.js?v=2"></script>
-<script src="ui/charts.js?v=2"></script>
-<script src="ui/sandboxpanel.js?v=1"></script>
-<script src="ui/coach.js?v=1"></script>
+<script src="ui/charts.js?v=3"></script>
+<script src="ui/sandboxpanel.js?v=2"></script>
+<script src="ui/coach.js?v=2"></script>
 <script src="ui/glossary.js?v=1"></script>
-<script src="ui/map.js?v=1"></script>
-<script src="ui/briefing.js?v=1"></script>
-<script src="ui/results.js?v=1"></script>
-<script src="game.js?v=3"></script>
+<script src="ui/map.js?v=2"></script>
+<script src="ui/briefing.js?v=2"></script>
+<script src="ui/results.js?v=2"></script>
+<script src="ui/lab.js?v=1"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

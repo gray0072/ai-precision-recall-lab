@@ -22,7 +22,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 ├── data/
 │   ├── scenarios.js        the six scenarios (03 §1)
 │   ├── contracts.js        C01–C12: terms, goals, incidents, lessons (03 §2)
-│   ├── upgrades.js         the Lab's upgrades (03 §3)
+│   ├── upgrades.js         the Lab's upgrades and the scenario families (03 §3; prices in constants.js)
 │   ├── glossary.js         the cheat sheet cards (03 §4)
 │   ├── quiz.js             briefing questions (03 §5)
 │   ├── coach.js            the coach marks' texts and triggers (01 §13)
@@ -46,8 +46,9 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── stream.js           pre-generating a contract's stream, the validation set, arrivals onto the belt, the gate
 │   ├── metrics.js          counts, every metric of 02 §3.2, the rolling window, ROC / PR / profit curves, AUC, AP, PSI
 │   ├── contract.js         prices and money, goals, the outbreak meter, failure, stars, the hindsight-best search
-│   ├── incidents.js        base rate shift, drift, adversary, price change, rush hour; Retrain
-│   ├── review.js           the review desk: band, queue, capacity, manual sends
+│   ├── incidents.js        the incidents' schedule, warnings and starts; the drift monitor (PSI, the alert); Retrain;
+│   │                       price change, rush hour (the adversary in I06); a headless retrain at the alert
+│   ├── review.js           the review desk: band, queue, capacity, manual sends (live and headless)
 │   ├── topk.js             queries, per-query top-k, precision@k / recall@k
 │   ├── sandbox.js          the sandbox's knobs applied to the model and the stream
 │   └── demo.js             the attract demo's threshold bot
@@ -84,7 +85,10 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
 │   ├── campaign.test.js    the data tables, the live contract run (gate money, goal chip, outbreak, cheat F, results,
 │   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save)
-│   ├── incidents.test.js
+│   ├── incidents.test.js   the schedule, price changes, a base rate shift, drift and AUC, PSI, C09's alert and
+│   │                       Retrain, stale Platt scaling, live incident events, the cheat I
+│   ├── review.test.js      the desk's capacity and rate, the band's money, the band-pair search vs play(), the live
+│   │                       desk with taps and "Desk full", the sandbox's band
 │   └── topk.test.js
 ├── tools/
 │   ├── balance-check.js    bot plays every contract at several fixed thresholds and the hindsight-best;
@@ -115,8 +119,8 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 ## 4. State and events
 
 - **Shared state** lives in `sim/state.js` as plain globals (`State.run`, `State.belt`, `State.pile`, `State.threshold`, `State.review`, `State.difficulty`, `State.screen`); other files read and change it there.
-- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}` (`grace` / `met` / `close` / `broken`), `incidentWarning {kind, inS}`, `incidentStarted`, `driftAlert {psi}`, `outbreak`, `deskFull`, `retrainDone`, `contractEnded {failed}` (null, `outbreak` or `bankrupt`), `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
-- **The main loop stays thin:** each frame (`requestAnimationFrame`, limited to 60 fps) `game.js` reads the input into the threshold(s), calls `Stream.update(dt)`, `Review.update(dt)`, `Incidents.update(dt)`, `Contract.update()` in this order, then `Render.frame()` and, when dirty, the live panel and the charts.
+- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}` (`grace` / `met` / `close` / `broken`), `incidentWarning {kind, inS, incident}`, `incidentStarted {kind, incident}`, `driftAlert {psi}`, `outbreak`, `deskFull {item}`, `retrainDone`, `contractEnded {failed}` (null, `outbreak` or `bankrupt`), `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
+- **The main loop stays thin:** each frame (`requestAnimationFrame`, limited to 60 fps) `game.js` reads the input into the threshold(s), calls `Stream.update(dt)`, `Review.update()`, `Incidents.update(dt)`, `Contract.update()` in this order (the gate itself drains the desk to each item's exact gate time, and checks the drift monitor after each decision), then `Render.frame()` and, when dirty, the live panel and the charts.
 - **Determinism:** all randomness comes from `core/rng.js` streams seeded per attempt (02 §2.2); `Math.random` is not used in `sim/`.
 
 ## 5. Storage
@@ -129,7 +133,7 @@ Every key starts with `prLab.` (the Pages origin `gray0072.github.io` is shared 
 | `prLab.sound` | `on` / `off` |
 | `prLab.difficulty` | `easy` / `medium` / `hard` |
 | `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], opened: [ids], cheated }` (`best` = the best contract money on that level, `quiz` = bonuses paid, `opened` = contracts opened by the map cheats); checked field by field on load (`Campaign.sanitize`) |
-| `prLab.sandbox.v1` | the sandbox's knobs: `{ scenario, prevalence, dPrime, calibrated, showClass, speed, prices: { TP, FP, FN, TN }, formulas, threshold }`, checked field by field on load (`Sandbox.sanitize`) |
+| `prLab.sandbox.v1` | the sandbox's knobs: `{ scenario, prevalence, dPrime, calibrated, showClass, speed, prices: { TP, FP, FN, TN }, formulas, review, reviewLow, threshold }`, checked field by field on load (`Sandbox.sanitize`) |
 
 A new save format gets a new key suffix (`.v2`) and a migration from the old one.
 
@@ -149,7 +153,8 @@ A new save format gets a new key suffix (`.v2`) and a migration from the old one
   - Platt scaling recovers `a = d'/γ`, `b = logit(π) − d'β/γ` within tolerance;
   - the cost-optimal threshold `p*` for the contracts' prices; the hindsight-best search finds the known optimum on a crafted stream and respects goals and the outbreak allowance;
   - a base rate shift leaves recall and FPR (in expectation) unchanged and moves precision as predicted; drift lowers the measured AUC; PSI > 0.2 after a 1.2 shift;
-  - the review queue respects capacity; top-k metrics on a known query;
+  - the review queue respects capacity; the band-pair search agrees with `play()`; top-k metrics on a known query;
+  - the drift monitor alerts after C09's drift and never before it; Retrain restores the separation; Platt scaling goes stale after a base rate shift;
   - determinism: the same seed gives the same stream; a base rate change does not move the arrivals or the score noise;
   - a threshold on calibrated `p` gives the same matrix as its equivalent raw threshold (ADR-0004).
 - **Balance:** `node tools/balance-check.js [--contract C05] [--difficulty hard]` plays each contract headless at t = 0.05, 0.10, …, 0.95 and at the hindsight-best, and prints money, goal met, stars; every contract must allow ★★★ on every level with the upgrades a normal campaign has by then (listed per contract in its output).

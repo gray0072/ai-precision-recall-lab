@@ -707,3 +707,43 @@ canvas.resChart { width: 100%; height: 130px; display: block; }
 @media (prefers-reduced-motion: reduce) {
   .resStars .starOn { animation: none; }
 }
+
+/* ---------- I05: the Lab, the review desk, incidents and the drift monitor ---------- */
+.psiChip { display: flex; align-items: center; gap: 6px; }
+.psiChip canvas { flex: 0 0 auto; }
+.psiChip.good { border-color: rgba(123, 216, 143, 0.4); }
+.psiChip.warn { border-color: var(--warn); }
+.psiChip.bad { border-color: var(--bad); }
+.incidentChip { border: 2px solid var(--review); color: var(--review); font-weight: 700; }
+#hudDesk { border-color: rgba(179, 157, 219, 0.5); }
+.retrainBtn { pointer-events: auto; font-weight: 700; }
+.retrainBtn:disabled { opacity: 0.55; cursor: default; }
+.retrainBtn.alert { border: 2px solid var(--bad); color: var(--bad); animation: retrainPulse 1.2s ease-in-out infinite; }
+@keyframes retrainPulse { 50% { background: rgba(255, 107, 94, 0.22); } }
+
+#labFamilies { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin: 8px 0 14px; }
+.labFamily { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+.labRoc { flex: 0 0 auto; border-radius: 8px; background: var(--bg-play); }
+.labFamInfo { min-width: 0; flex: 1 1 auto; }
+.labFamInfo h2 { margin: 0 0 4px; }
+.labFamInfo .fine { min-height: 0; margin: 4px 0 0; }
+.labScen { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.labScen b { white-space: nowrap; }
+#labUpgrades { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.labUpgrade { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+.labUpgrade.bought { border-color: rgba(123, 216, 143, 0.45); }
+.labUpgrade.locked { opacity: 0.55; }
+.labUpHead { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.labPrice { color: var(--accent); font-weight: 700; }
+.labEffect { margin: 0; font-size: 13px; line-height: 1.4; }
+.labWhy { min-height: 0; margin: 0 0 4px; }
+.labUpgrade .btn { min-height: 36px; font-size: 13px; margin-top: auto; }
+.labUpgrade.bought .btn { color: var(--good); }
+
+.resIncident { margin-top: 10px; }
+.resAround td { min-width: 0; height: auto; padding: 2px 8px; background: rgba(255, 255, 255, 0.05); font-size: 13px; }
+canvas.resChart.resSquare { height: 200px; max-width: 260px; }
+/* a crowded HUD (goal, PSI, desk, Retrain): the right buttons keep their size, on a phone held upright the chips wrap */
+.hudRight { flex-shrink: 0; }
+#play.portrait #hud { align-items: flex-start; }
+#play.portrait .hudLeft { flex-wrap: wrap; row-gap: 4px; }

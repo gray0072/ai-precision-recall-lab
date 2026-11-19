@@ -10,14 +10,16 @@
 // On narrow panels one chart shows at a time, under tabs; in a contract the profit curve shows only where the
 // difficulty allows it (Easy). Charts redraw only when something changed. The results screen's charts are here
 // too: the threshold over time with the hindsight-best line (sparkline) and the profit curve of the contract's
-// stream with the player's average and the best threshold.
+// stream with the player's average and the best threshold, the incidents marked on the sparkline, and the
+// reliability diagram of a calibrated contract. With the drift monitor ROC and PR also show the rolling
+// window's "recent" curves (dashed violet); in the sandbox a fourth tab shows the window's reliability diagram.
 // Reads State; used by game.js (update, resize, tabs) and ui/results.js.
 // ============================================================
 
 const Charts = (() => {
   const P = PALETTE;
   const FONT = 'Segoe UI, Arial, sans-serif';
-  const IDS = ['roc', 'pr', 'profit'];
+  const IDS = ['roc', 'pr', 'profit', 'calib'];
   const charts = {};
   document.querySelectorAll('#chartsBox .chart').forEach((el) => {
     const canvas = el.querySelector('canvas');
@@ -26,7 +28,8 @@ const Charts = (() => {
   let tab = 'roc';
   let key = '';
   let profitShown = true;
-  const shownIds = () => IDS.filter((id) => id !== 'profit' || profitShown);
+  let calibShown = false;
+  const shownIds = () => IDS.filter((id) => (id !== 'profit' || profitShown) && (id !== 'calib' || calibShown));
 
   function resize() {
     for (const id of IDS) {
@@ -48,6 +51,14 @@ const Charts = (() => {
     charts.profit.el.hidden = !on;
     document.querySelector('#chartsBox [data-tab="profit"]').hidden = !on;
     if (!on && tab === 'profit') tab = 'roc';
+  }
+
+  // the reliability diagram during play: in the sandbox (02 §2.3)
+  function showCalib(on) {
+    calibShown = on;
+    charts.calib.el.hidden = !on;
+    document.querySelector('#chartsBox [data-tab="calib"]').hidden = !on;
+    if (!on && tab === 'calib') tab = 'roc';
   }
 
   function setTab(id) {
@@ -161,6 +172,27 @@ const Charts = (() => {
     p.ctx.fillText(text, p.x0 + p.side / 2, p.y0 + p.side / 2);
   }
 
+  // With the drift monitor (02 §4): the curves of the rolling window, on the raw score, drawn faint and dashed
+  // next to the model's; after drift they sag below it. Cached by the pile's version.
+  const RECENT_MIN = 40;
+  let recentKey = '', recentVal = null;
+  function recentCurves(run) {
+    if (!run.monitor || State.pile.length < RECENT_MIN) return null;
+    const k = State.pileVersion + '|' + run.gen;
+    if (k !== recentKey) { recentKey = k; recentVal = { roc: Metrics.roc(State.pile, 's'), pr: Metrics.pr(State.pile, 's') }; }
+    return recentVal;
+  }
+  function faint(p, pts, fx, fy) {
+    const ctx = p.ctx;
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    polyline(p, pts, fx, fy);
+    ctx.strokeStyle = 'rgba(179, 157, 219, 0.85)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // ---------- the charts ----------
   function drawRoc(c, run, op, live, tLabel) {
     const p = frame(c, tr('ROC curve'));
@@ -185,7 +217,10 @@ const Charts = (() => {
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
+    const recent = recentCurves(run);
+    if (recent && recent.roc) faint(p, recent.roc, (q) => q.fpr, (q) => q.tpr);
     const lines = ['AUC ' + run.curves.auc.toFixed(2)];
+    if (recent && recent.roc) lines.push(tr('recent {v}', { v: Metrics.rocAuc(recent.roc).toFixed(2) }));
     if (run.kind === 'sandbox') lines.push(tr('theory {v}', { v: Model.theoreticalAuc(run.model.dPrime).toFixed(2) }));
     corner(p, lines);
     if (live) ring(p, live.fpr, live.recall);
@@ -217,7 +252,9 @@ const Charts = (() => {
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.stroke();
-    corner(p, ['AP ' + run.curves.ap.toFixed(2)]);
+    const recent = recentCurves(run);
+    if (recent && recent.pr) faint(p, recent.pr, (q) => q.recall, (q) => q.precision);
+    corner(p, ['AP ' + run.curves.ap.toFixed(2)].concat(recent && recent.pr ? [tr('recent: dashed')] : []));
     if (live) ring(p, live.recall, live.precision);
     if (op.recall !== null && op.precision !== null) dot(p, op.recall, op.precision, tLabel);
   }
@@ -297,6 +334,33 @@ const Charts = (() => {
     say(tLabel + ' → ' + money(here.per100), P.accent, next);
   }
 
+  // The reliability diagram (02 §2.3) of the rolling window: in each bin of the value on the belt (raw score or
+  // calibrated p) the observed share of positives as a bar, the diagonal as the reference. Raw scores of a
+  // miscalibrated model sit off the diagonal; calibrated p on it (until the base rate moves).
+  function drawCalib(c, run) {
+    const p = frame(c, run.key === 'p' ? tr('Calibration of p') : tr('Calibration of the raw score'));
+    axes(p, run.key === 'p' ? tr('calibrated p') : tr('model score'), tr('share positive'));
+    reliabilityBars(p, Metrics.reliability(State.pile, run.key), P.review, 0, 1);
+    if (State.pile.length < 20) nothing(p, tr('needs more items'));
+    else corner(p, [tr('last {n} items', { n: State.pile.length })]);
+  }
+  // the bars of one reliability series (slot part of parts side by side in a bin) and the diagonal
+  function reliabilityBars(p, bins, color, part, parts) {
+    const ctx = p.ctx;
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath(); ctx.moveTo(p.X(0), p.Y(0)); ctx.lineTo(p.X(1), p.Y(1)); ctx.stroke();
+    ctx.restore();
+    const bw = p.side / bins.length;
+    ctx.fillStyle = color;
+    for (const b of bins) {
+      if (b.observed === null) continue;
+      const x = p.X(b.lo) + 1 + part * (bw - 2) / parts;
+      ctx.fillRect(x, p.Y(b.observed), (bw - 2) / parts - 1, p.Y(0) - p.Y(b.observed));
+    }
+  }
+
   // whole dollars with a sign (04 §2); the profit per 100 items keeps one decimal when it is small
   function money(v) {
     const a = Math.abs(v), txt = a < 10 && Math.round(a) !== a ? a.toFixed(1) : String(Math.round(a));
@@ -307,7 +371,7 @@ const Charts = (() => {
   function update(force) {
     const run = State.run;
     if (!run || !run.curves) return;
-    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + tab + '|' + run.curves.auc + '|' + run.bestT;
+    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + tab + '|' + run.curves.auc + '|' + run.bestT + '|' + !!run.monitor;
     if (k === key && !force) return;
     key = k;
     const t = State.threshold;
@@ -318,6 +382,7 @@ const Charts = (() => {
     if (visible('roc')) drawRoc(charts.roc, run, op, live, tLabel);
     if (visible('pr')) drawPr(charts.pr, run, op, live, tLabel);
     if (visible('profit')) drawProfit(charts.profit, run, tLabel);
+    if (visible('calib')) drawCalib(charts.calib, run);
   }
 
   document.querySelectorAll('#chartsBox [data-tab]').forEach((b) => b.addEventListener('click', () => { setTab(b.dataset.tab); update(true); }));
@@ -367,6 +432,18 @@ const Charts = (() => {
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(x0, Y(r.best.t)); ctx.lineTo(x1, Y(r.best.t)); ctx.stroke();
       ctx.restore();
+    }
+    // the incidents: a violet mark at the item each one started with, its name next to it
+    for (const inc of r.incidents || []) {
+      if (!inc.started) continue;
+      const x = Math.round(X(inc.at)) + 0.5;
+      ctx.strokeStyle = P.review;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+      ctx.fillStyle = P.review;
+      ctx.textAlign = x > (x0 + x1) / 2 ? 'right' : 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(tr(inc.name), x + (ctx.textAlign === 'left' ? 4 : -4), y0 + 3);
     }
     const ts = r.thresholds;
     if (!ts.length) return;
@@ -428,5 +505,19 @@ const Charts = (() => {
     }
   }
 
-  return { resize, update, setTab, nextTab, showProfit, sparkline, resultProfit, get tab() { return tab; } };
+  // The results' reliability diagram of a calibrated contract (02 §2.3): before the base rate shift (grey) and
+  // after it (violet) side by side; after the shift the bars stand above the diagonal: the old p is too low.
+  function resultReliability(canvas, rel) {
+    const r = canvas.getBoundingClientRect();
+    const c = { canvas, ctx: canvas.getContext('2d'), w: Math.max(10, r.width), h: Math.max(10, r.height) };
+    c.s = canvasScale(c.w, c.h);
+    canvas.width = Math.round(c.w * c.s);
+    canvas.height = Math.round(c.h * c.s);
+    const p = frame(c, '');
+    axes(p, tr('calibrated p on the badge'), tr('share positive'));
+    reliabilityBars(p, rel.before, rel.after ? 'rgba(238, 243, 247, 0.55)' : P.review, 0, rel.after ? 2 : 1);
+    if (rel.after) reliabilityBars(p, rel.after, P.review, 1, 2);
+  }
+
+  return { resize, update, setTab, nextTab, showProfit, showCalib, sparkline, resultProfit, resultReliability, get tab() { return tab; } };
 })();

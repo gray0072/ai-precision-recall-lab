@@ -4,7 +4,7 @@
 // AI Precision Recall Lab — the campaign map (spec 01 §2, 04 §3): the three acts as rows of contract cards.
 // A card shows the client's avatar, the contract's id and name, the idea it teaches (once it has been played),
 // its best stars on Easy / Medium / Hard and a lock; the contracts of later iterations show as "coming soon".
-// Above them the balance and a "test save" tag when the save is cheated; under them Lab (opens in I05), Cheat
+// Above them the balance and a "test save" tag when the save is cheated; under them Lab (open after C01), Cheat
 // sheet, Back. Cards are buttons, so the arrows move between them and Space / Enter open the briefing.
 // Reads Campaign; game.js passes what a card does.
 // ============================================================
@@ -76,7 +76,8 @@ const MapScreen = (() => {
       sec.appendChild(row);
       acts.appendChild(sec);
     }
-    $('mapLabBtn').title = tr('Opens soon');
+    $('mapLabBtn').title = Campaign.labOpen() ? tr('Spend money on upgrades of the models') : tr('The Lab opens after the first contract');
+    $('mapLabBtn').classList.toggle('secondary', !Campaign.labOpen());
     Screens.show('map');
     // the default card (Enter plays on): the first open contract with no star yet, else the first one without
     // ★★★ on the current level

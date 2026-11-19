@@ -45,7 +45,7 @@ With the Calibration upgrade, at the start of a contract the game fits **Platt s
 
 ### 2.4 Amounts (value-weighted scenarios)
 
-Fraud items carry a payment amount, log-normal: `ln(amount) ~ N(ln 60, 1.1)` for genuine payments and `N(ln 60 + 0.4, 1.1)` for fraud, rounded to whole dollars, clamped to $1–$5 000. The score does not depend on the amount (the model does not see it). The amount is shown on the item's drawing.
+Items of a contract with the fraud prices (C05, and the fraud phase of C12) carry a payment amount, log-normal (C06 plays Card Watch with flat prices, so its payments carry none): `ln(amount) ~ N(ln 60, 1.1)` for genuine payments and `N(ln 60 + 0.4, 1.1)` for fraud, rounded to whole dollars, clamped to $1–$5 000. The score does not depend on the amount (the model does not see it). The amount is shown on the item's drawing.
 
 ## 3. Metrics
 
@@ -107,14 +107,14 @@ Example (C02): `V = +3 / −10 / 0 / 0` → `p* = 10 / (3 + 10) = 0.77`. This is
 
 On the results screen, over the contract's actual items (scores, classes, amounts, arrival times as they happened): for every `t` in 0.00…1.00 the money the contract would have made with that threshold held fixed the whole time, keeping only thresholds that meet the goal and do not fail the contract (outbreak allowance). The best of them is the **hindsight-best threshold**, used for ★★★ (01 §4) and the results' comparison.
 
-- With a review band, the search is over pairs (`t_review`, `t`) with `t_review ≤ t`, simulating the desk's queue and capacity on the arrival times (101 × 101 pairs × ≤ 400 items, fine).
+- With a review band, the search is over pairs (`t_review`, `t`) with `t_review ≤ t`, simulating the desk's queue and capacity on the gate times (arrival + ride); the desk of sim/review.js is the same one the live run uses. About 5 000 pairs × ≤ 400 items: each item is prepared once as integers (its score in hundredths, its class, its gate time, the cents of each outcome) and every pair is a plain loop; `play()` makes the winner's full result, and a test checks that the two agree. Among pairs with the same money the narrowest band wins. A reviewed item counts as TP or TN and costs `REVIEW_FEE`.
 - With top-k (§7), the search is over `k`.
 - Adversarial items keep the scores they spawned with (a fixed threshold in hindsight would have been gamed differently; the results note this).
 - If no threshold meets the goal, the results say *"No fixed threshold could meet the goal on this stream: the model is not good enough. Visit the Lab."* and ★★★ is out of reach for this attempt.
 
 ## 6. Incidents
 
-Incidents are listed per contract in 03 §2 as `{ at: <item index>, kind, params }`. A change ramps in linearly over `ramp` items (default `INCIDENT_RAMP` = 20).
+Incidents are listed per contract in 03 §2 as `{ at: <item index>, kind, params }`. A change ramps in linearly over `ramp` items (default `INCIDENT_RAMP` = 20). The stream is made in advance, so the incidents become a schedule (item index → base rate, drift, rate factor) that `Stream.generate` follows; an incident starts when its first item arrives on the belt, with a warning `warnS` seconds ahead on Easy and Medium (the arrival time is known in advance).
 
 ### 6.1 Base rate shift
 
@@ -123,8 +123,8 @@ Incidents are listed per contract in 03 §2 as `{ at: <item index>, kind, params
 ### 6.2 Drift and the drift monitor
 
 - **Drift**: the positives' mean moves down by `params.shift` (in logit units): `drift` in §2.1 goes from 0 to `shift`, so the effective separation becomes `d' − shift`.
-- **PSI** (population stability index, with the Drift monitor): 10 bins at the deciles of the validation set's scores; `PSI = Σ (aᵢ − eᵢ) · ln(aᵢ / eᵢ)` with `eᵢ` the validation share and `aᵢ` the rolling window's share of bin `i`, both floored at 1e−4. Read as < 0.1 stable, 0.1–0.2 moderate, > 0.2 (`PSI_ALERT`) shifted. PSI watches the **scores only**: it also fires on a base rate shift (more positives move the score distribution), which the alert says ("the inputs changed: base rate or drift?").
-- **Retrain** (once per contract, with the Drift monitor): takes `RETRAIN_S` (15 s) during which the button shows progress; then `drift` returns to 0 (the model learns the new spam), a new validation set is generated with the current `π`, the curves and the calibration are refitted, and PSI is measured against the new reference.
+- **PSI** (population stability index, with the Drift monitor; [ADR-0005](../adr/0005-psi-short-window.md)): `PSI_BINS` = 5 bins cut at the quantiles of the validation set's raw scores (a cut on a tie of the 0.01 grid counts the real share of each bin); `PSI = Σ (aᵢ − eᵢ) · ln(aᵢ / eᵢ)` with `eᵢ` the validation share and `aᵢ` the share of bin `i` among the last `PSI_WINDOW` = 80 decided items scored by the current model, both floored at 1e−4. It is measured after every decision once the window is full. Read as < 0.1 stable, 0.1–0.2 moderate, > 0.2 (`PSI_ALERT`) shifted; the **alert** fires after `PSI_PERSIST` = 10 decisions in a row above `PSI_ALERT` (a short window is noisy: about (bins − 1) / n at rest). With C09's drift (shift 2.0) the alert comes about one window, ~80 items, after the drift starts. PSI watches the **scores only**: it also fires on a base rate shift (more positives move the score distribution), which the alert says ("the inputs changed: base rate or drift?").
+- **Retrain** (once per contract, with the Drift monitor): takes `RETRAIN_S` (15 s) during which the button shows progress; then `drift` returns to 0 for the items still to come (the model learns the new spam; each item keeps its own noise draw, so it is the same item scored by a better model; items already on the belt keep their scores), a new validation set is generated with the current `π` (from its own seed), the curves and the calibration are refitted, and PSI is measured against the new reference on the items the new model scored.
 
 ### 6.3 Adversary
 
@@ -154,11 +154,14 @@ Used by C11 and the sandbox's Top-k mode.
 | `N_VAL` | 4 000 | validation set size |
 | `D_PRIME_MAX` | 4.5 | cap on the effective separation |
 | `INCIDENT_RAMP` | 20 | items over which an incident's change ramps in |
-| `PSI_ALERT` | 0.2 | PSI level of the drift alert |
+| `PSI_ALERT` / `PSI_CALM` | 0.2 / 0.1 | PSI level of the drift alert / below it the chip reads "stable" |
+| `PSI_BINS` / `PSI_WINDOW` / `PSI_PERSIST` | 5 / 80 / 10 | PSI's quantile bins, its window of decided items, the decisions in a row above the alert level before the alert (ADR-0005) |
 | `RETRAIN_S` | 15 | seconds a retrain takes |
 | `ADV_SHARE` / `ADV_LAG_S` / `ADV_MARGIN` | 0.4 / 8 / 0.08 | adversary: share of crafted positives, lag of the threshold they aim at, margin below it |
 | `REVIEW_FEE` | $1 | cost of one human review |
 | `REVIEW_RATE` | 0.25 / 0.4 / 0.6 | reviews per second at desk levels I / II / III |
+| `REVIEW_QUEUE` | 3 | items the desk holds at once; more is "Desk full" |
+| `REVIEW_SANDBOX_LEVEL` / `REVIEW_BAND_DEFAULT` | 2 / 0.15 | the sandbox's desk level; a new band starts this far under the threshold |
 | `QUIZ_BONUS` | $50 | right answer in a briefing |
 | `STAR3_SHARE` | 0.9 | share of the hindsight-best profit for ★★★ |
 | `TOPK_DOCS` | 30 | documents per query |

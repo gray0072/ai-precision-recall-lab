@@ -2,7 +2,8 @@
 
 // ============================================================
 // AI Precision Recall Lab — the coach marks (spec 01 §13): a bubble with an arrow pointing at what it
-// explains (an item on the belt, the threshold's handle, a matrix cell, a metric bar, a HUD chip). While one is
+// explains (an item on the belt, the threshold's handle, the review band's handle, a matrix cell, a metric
+// bar, a HUD chip). While one is
 // shown the stream holds (State.held: the belt stops, the line can still be moved) until the player does what
 // it asks: presses Got it (or Space / Enter), or drags the threshold. Marks come from data/coach.js in order,
 // each when its trigger fires; seen ones are remembered in the campaign, and C01 always shows its own.
@@ -39,6 +40,8 @@ const Coach = (() => {
     if (w.startsWith('after:')) return done.has(w.slice(6));
     if (w.startsWith('outcome:')) return run.totals[w.slice(8)] > 0;
     if (w.startsWith('count:')) return run.count >= +w.slice(6);
+    if (w === 'incident') return !!(run.incidents && run.incidents.some((x) => x.started));
+    if (w === 'alert') return !!(run.monitor && run.monitor.alert);
     return false;
   }
 
@@ -47,6 +50,8 @@ const Coach = (() => {
     if (m.params) {
       if (m.params.includes('allowance')) params.allowance = run.allowance;
       if (m.params.includes('target')) params.target = run.goalTarget !== null ? run.goalTarget.toFixed(2) : '';
+      if (m.params.includes('desk')) params.desk = State.review ? State.review.max : REVIEW_QUEUE;
+      if (m.params.includes('window')) params.window = PSI_WINDOW;
     }
     return Glossary.marked(tr(m.text, params));
   }
@@ -62,6 +67,11 @@ const Coach = (() => {
     if (t.handle) {
       const p = Render.handlePoint();
       return { left: p.x - 24, right: p.x + 24, top: p.y - 18, bottom: p.y + 18 };
+    }
+    if (t.band) {
+      if (!State.review) return null;
+      const p = Render.bandPoint();
+      return { left: p.x - 22, right: p.x + 22, top: p.y - 18, bottom: p.y + 18 };
     }
     const el = t.cell ? document.querySelector('#matrix [data-cell="' + t.cell + '"]')
       : t.bar ? document.querySelector('#barsBox .bar[data-metric="' + t.bar + '"]')

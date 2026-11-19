@@ -4,7 +4,7 @@
 // AI Precision Recall Lab — the metrics (spec 02 §3, §4). Counts of the confusion matrix, every metric of
 // 02 §3.2 with its empty-denominator rule (null = "not defined yet", shown as "—"), the rolling window
 // re-evaluated at the current threshold, and the curves over the 101 thresholds 0.00 … 1.00: ROC with its
-// AUC, PR with average precision, the profit curve, the reliability diagram.
+// AUC, PR with average precision, the profit curve, the reliability diagram, and the PSI of the drift monitor.
 // Items are { y, s, p?, … }; `key` says which value the threshold is compared with ('s' raw, 'p' calibrated).
 // Scores sit on the 0.01 grid, so one pass into a 101-bin histogram gives every threshold at once.
 // The curves and AUC / AP are computed on the raw score even when calibrated (ADR-0004): the operating point
@@ -196,8 +196,42 @@ const Metrics = (() => {
     return { t: rawT, fpr: m.fpr, tpr: m.recall, recall: m.recall, precision: m.precision };
   }
 
+  // ---------- PSI, the population stability index (02 §6.2, ADR-0005) ----------
+  // The reference: PSI_BINS bins cut at the quantiles of the validation set's raw scores, with the share eᵢ of
+  // the validation set in each. Scores sit on the 0.01 grid, so a cut can fall on a tie: bin i holds the scores
+  // ≥ cut[i − 1] and < cut[i], and its share is the real share (not exactly 1 / bins); two equal cuts make an
+  // empty bin, which adds nothing (both shares are floored to the same 1e−4).
+  function psiReference(scores, bins = PSI_BINS) {
+    const sorted = Array.from(scores).sort((a, b) => a - b);
+    const cuts = [];
+    for (let k = 1; k < bins; k++) cuts.push(sorted[Math.floor(k * sorted.length / bins)]);
+    const ref = { cuts, bins, e: new Array(bins).fill(0) };
+    for (const s of scores) ref.e[psiBin(ref, s)]++;
+    for (let i = 0; i < bins; i++) ref.e[i] /= Math.max(1, scores.length);
+    return ref;
+  }
+  function psiBin(ref, s) {
+    let b = 0;
+    while (b < ref.bins - 1 && hundredths(s) >= hundredths(ref.cuts[b])) b++;
+    return b;
+  }
+  // PSI = Σ (aᵢ − eᵢ) · ln(aᵢ / eᵢ), aᵢ the share of the given scores in bin i; both shares floored at 1e−4.
+  // Every term is ≥ 0 (a − e and ln(a / e) have the same sign). < 0.1 stable, 0.1–0.2 moderate, > 0.2 shifted.
+  // null without scores.
+  function psi(ref, scores) {
+    if (!scores.length) return null;
+    const a = new Array(ref.bins).fill(0);
+    for (const s of scores) a[psiBin(ref, s)]++;
+    let sum = 0;
+    for (let i = 0; i < ref.bins; i++) {
+      const ai = Math.max(1e-4, a[i] / scores.length), ei = Math.max(1e-4, ref.e[i]);
+      sum += (ai - ei) * Math.log(ai / ei);
+    }
+    return sum;
+  }
+
   return {
     emptyCounts, counts, tally, window, sums, compute, value, sweep, roc, rocAuc, auc, pr, averagePrecision,
-    profitCurve, reliability, modelCurves, operatingPoint
+    profitCurve, reliability, modelCurves, operatingPoint, psiReference, psiBin, psi
   };
 })();

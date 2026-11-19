@@ -5,7 +5,8 @@
 // axis, the scrolling belt with the "flagged" tint above the line, the items at the height of their score
 // with their badges (hidden class, or a faint hint of it), the gate whose lamp flashes the outcome, the reveal
 // (the item flips to its true class) and the flight onto its square in the pile, the outcome tag over the
-// gate, the threshold line across belt and pile with its handle, and the cost-optimal ghost line.
+// gate (👥 for the review desk's decisions), the threshold line across belt and pile with its handle, the
+// review band with its handle at the left edge and the ring on items sent to people, and the cost-optimal ghost line.
 // prefers-reduced-motion: no bobbing, no flip, no arc (the pile fades the item in). Reads State.
 // Used by render/render.js; LAND_S is read by render/pile.js.
 // ============================================================
@@ -104,6 +105,13 @@ const Belt = (() => {
       const y = Render.yOf(v) + (bob ? Math.sin(time * 3 + it.i * 1.7) * 1.2 : 0);
       ItemArt.draw(ctx, run.scenario.id, x, y, G.itemSize, 'hidden', { tint: tint ? look(it) : null, item: it });
       ItemArt.badge(ctx, v.toFixed(2), x, y - G.itemSize * 0.62 - fs * 0.4, fs, null);
+      if (it.sent) {   // sent to the review desk: a violet ring until people decide it at the gate
+        ctx.beginPath();
+        ctx.arc(x, y, G.itemSize * 0.72, 0, Math.PI * 2);
+        ctx.strokeStyle = P.review;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -152,11 +160,55 @@ const Belt = (() => {
       const st = OUTCOME_STYLE[it.outcome];
       const y = Render.yOf(valueOf(run, it)) - G.itemSize * 1.25 - since * 18;
       ctx.globalAlpha = since < 0.15 ? since / 0.15 : 1 - Math.max(0, since - 0.5) / (TAG_S - 0.5);
-      ctx.fillStyle = st.color;
-      Icons.drawText(ctx, it.outcome + ' ' + (st.right ? '✓' : '✗'), G.gateX, Math.max(fs, y), st.color,
+      // people's decisions (the review desk) carry 👥 and the desk's violet
+      const color = it.reviewed ? P.review : st.color;
+      ctx.fillStyle = color;
+      Icons.drawText(ctx, (it.reviewed ? '👥 ' : '') + it.outcome + ' ' + (st.right ? '✓' : '✗'), G.gateX, Math.max(fs, y), color,
         (s, x) => ctx.fillText(s, x, Math.max(fs, y)));
     }
     ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+
+  // The review band [low, t) (01 §5): a violet stripe under the threshold across belt and pile, its lower edge
+  // dashed, and its handle in the column at the left edge with the edge's value. Items in it go to people.
+  function drawBand(ctx, G, run) {
+    const d = State.review;
+    if (!d || !G.bandW) return;
+    const t = State.threshold, low = Review.lowOf(d, t);
+    const yt = Render.yOf(t), yl = Math.round(Render.yOf(low)) + 0.5;
+    const small = G.W < 600;
+    ctx.fillStyle = 'rgba(14, 28, 42, 0.9)';
+    ctx.fillRect(0, 0, G.bandW, G.H);
+    if (yl > yt + 0.5) {
+      ctx.fillStyle = 'rgba(179, 157, 219, 0.16)';
+      ctx.fillRect(G.beltX0, yt, G.pileX1 - G.beltX0, yl - yt);
+    }
+    ctx.save();
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = P.review;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(G.bandW, yl); ctx.lineTo(G.pileX1, yl); ctx.stroke();
+    ctx.restore();
+    // the handle: a violet pill with the lower edge's value, pointing right at the band
+    const hh = small ? 30 : 32, hx = 3, hw = G.bandW - 10;
+    const hy = clamp(yl - hh / 2, 1, G.H - hh - 1);
+    ctx.beginPath();
+    ctx.moveTo(hx + hw + 7, yl);
+    ctx.lineTo(hx + hw - 2, clamp(yl - 7, hy, hy + hh));
+    ctx.lineTo(hx + hw - 2, clamp(yl + 7, hy, hy + hh));
+    ctx.closePath();
+    ctx.fillStyle = P.review;
+    ctx.fill();
+    ItemArt.rr(ctx, hx, hy, hw, hh, 9);
+    ctx.fill();
+    ctx.fillStyle = '#1b2733';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 ' + (small ? 9 : 10) + 'px ' + FONT;
+    ctx.fillText(tr('review'), hx + hw / 2, hy + hh * 0.3);
+    ctx.font = '800 ' + (small ? 12 : 13) + 'px ' + FONT;
+    ctx.fillText(low.toFixed(2), hx + hw / 2, hy + hh * 0.68);
     ctx.textAlign = 'left';
   }
 
@@ -207,5 +259,5 @@ const Belt = (() => {
     ctx.fillText(t.toFixed(2), hx + hw / 2, hy + hh * 0.68);
   }
 
-  return { LAND_S, drawBackground, drawGate, drawItems, drawFlights, drawTags, drawThreshold };
+  return { LAND_S, drawBackground, drawGate, drawItems, drawFlights, drawTags, drawBand, drawThreshold };
 })();

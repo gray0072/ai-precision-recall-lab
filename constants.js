@@ -43,16 +43,33 @@ const PLATT_TOL = 1e-9;        // … and stop when a step is smaller than this
 const RELIABILITY_BINS = 10;   // bins of the reliability diagram (02 §2.3)
 const INCIDENT_RAMP = 20;      // items over which an incident's change ramps in (02 §6)
 const PSI_ALERT = 0.2;         // PSI level of the drift alert
+const PSI_CALM = 0.1;          // PSI below this reads "stable" (the chip's colour)
+const PSI_BINS = 5;            // quantile bins of the validation scores the PSI compares (ADR-0005)
+const PSI_WINDOW = 80;         // the drift monitor's PSI is on the last this many decided items (ADR-0005)
+const PSI_PERSIST = 10;        // the alert fires after this many decisions in a row with PSI > PSI_ALERT
 const RETRAIN_S = 15;          // seconds a retrain takes
 const ADV_SHARE = 0.4;         // adversary: share of positives that are crafted
 const ADV_LAG_S = 8;           // adversary: seconds of lag of the threshold they aim at
 const ADV_MARGIN = 0.08;       // adversary: the largest margin below that threshold
 const REVIEW_FEE = 1;          // $ per human review
 const REVIEW_RATE = [0.25, 0.4, 0.6];   // reviews per second at desk levels I / II / III
+const REVIEW_QUEUE = 3;        // items the desk holds at once (the one in review and those waiting); more = "Desk full"
+const REVIEW_SANDBOX_LEVEL = 2;   // the desk level of the sandbox's review band
+const REVIEW_BAND_DEFAULT = 0.15; // a new review band starts this far below the threshold
 const QUIZ_BONUS = 50;         // $ for the right answer in a briefing
 const STAR3_SHARE = 0.9;       // share of the hindsight-best profit for ★★★
 const TOPK_DOCS = 30;          // documents per query (02 §7)
 const DEMO_SWEEP_S = 20;       // attract demo: seconds per full threshold sweep
+
+// ---------- The Lab (spec 01 §5, 03 §3): price ($) and d' bonus of each upgrade ----------
+const UPGRADE_PRICES = {
+  'U-data-1': 300, 'U-data-2': 700, 'U-data-3': 1500,
+  'U-feat-text': 900, 'U-feat-sensor': 900, 'U-feat-behaviour': 900,
+  'U-calib': 600, 'U-drift': 500,
+  'U-review-1': 800, 'U-review-2': 1000, 'U-review-3': 1400
+};
+const UPGRADE_DATA_DPRIME = 0.25;      // More data I–III: d' added to every family, each
+const UPGRADE_FEATURE_DPRIME = 0.4;    // a family's features: d' added to that family
 
 // ---------- Contracts and the campaign (spec 01 §3–§4, §14) ----------
 const GOAL_CLOSE = 0.05;       // the goal chip is amber while the value is below the target by less than this

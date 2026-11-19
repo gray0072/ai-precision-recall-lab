@@ -2,9 +2,10 @@
 
 // ============================================================
 // AI Precision Recall Lab — the main flow (spec 05 §4): wires the buttons and keys to the screens (start, map,
-// briefing, contract, results, sandbox, cheat sheet, pause, the New campaign confirmation) and runs the play
-// screen. Each frame (limited to MAX_FPS) it moves the run (Stream.update: in the sandbox scaled by its speed
-// unless the belt is paused; in a contract unless a coach mark holds it), checks the contract's end
+// briefing, contract, results, the Lab, sandbox, cheat sheet, pause, the New campaign confirmation) and runs the
+// play screen. Each frame (limited to MAX_FPS) it moves the run (Stream.update and the review desk: in the
+// sandbox scaled by its speed unless the belt is paused; in a contract unless a coach mark holds it, then the
+// incidents and the retrain), checks the contract's end
 // (Contract.update), draws the canvas (Render.frame) and lets the HUD, the live panel and the charts redraw
 // what changed. Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left. The debug
 // cheats of 01 §14 are here too. Loaded last.
@@ -27,6 +28,7 @@ const Game = (() => {
 
   function leavePlay() {
     showPlay(false);
+    Review.detach(State.run);
     State.run = null;
     State.paused = false;
     State.held = false;
@@ -62,7 +64,12 @@ const Game = (() => {
     Screens.renderSound('#pauseSoundRow');
   }
 
-  function labSoon() { Screens.banner(tr('The Lab opens soon: model upgrades arrive in a later version.')); }
+  // the Lab (01 §5): from the map and the results, once C01 has a star; Back returns where it came from
+  function openLab(back) {
+    if (!Campaign.labOpen()) { Screens.banner(tr('The Lab opens after the first contract: earn a star on C01.')); return; }
+    State.screen = 'lab';
+    Lab.show(back);
+  }
 
   // ---------- the campaign: New campaign, the briefing, a contract, its results ----------
   function newCampaign() {
@@ -87,13 +94,13 @@ const Game = (() => {
     State.paused = false;
     State.held = false;
     endAt = 0;
-    const run = Contract.start(CONTRACTS[id], { difficulty: State.difficulty, seed: Rng.freshSeed() });
-    State.threshold = 0.5;
+    const run = Contract.start(CONTRACTS[id], { difficulty: State.difficulty, seed: Rng.freshSeed(), upgrades: Campaign.upgrades() });
     Screens.hide();
     showPlay(true);
     Hud.reset();
     LivePanel.reset();
     Charts.showProfit(DIFFICULTIES[State.difficulty].profitCurve);
+    Charts.showCalib(false);
     lastLayout = null;
     applyLayout();
     Coach.start(run);
@@ -107,7 +114,7 @@ const Game = (() => {
     Results.show(r, paid, {
       next: (id) => briefing(id),
       retry: () => briefing(contractId),
-      lab: labSoon,
+      lab: () => openLab(() => { State.screen = 'results'; Screens.show('results'); }),
       map: () => go('map'),
       card: (card) => Glossary.show({ card }, () => { State.screen = 'results'; Screens.show('results'); })
     });
@@ -132,7 +139,7 @@ const Game = (() => {
   function saveSandbox() {
     const run = State.run;
     if (!run || run.kind !== 'sandbox') return;
-    const json = JSON.stringify(Object.assign({}, run.knobs, { threshold: State.threshold }));
+    const json = JSON.stringify(Object.assign({}, run.knobs, { threshold: State.threshold }, State.review ? { reviewLow: State.review.low } : {}));
     if (json === savedKnobs) return;
     savedKnobs = json;
     Store.set('sandbox.v1', json);
@@ -145,6 +152,7 @@ const Game = (() => {
     Hud.reset();
     LivePanel.reset();
     Charts.showProfit(true);
+    Charts.showCalib(true);
     SandboxPanel.show(knobChanged);
     lastLayout = null;
     SandboxPanel.setOpen(Render.layoutName() === 'desktop');
@@ -152,7 +160,7 @@ const Game = (() => {
   }
 
   function knobChanged(what) {
-    if (what === 'panel') applyLayout();
+    if (what === 'panel' || what === 'review') applyLayout();
     saveSandbox();
     LivePanel.update(true);
     Charts.update(true);
@@ -237,7 +245,13 @@ const Game = (() => {
       if (onMap) MapScreen.show(briefing);
       return true;
     }
-    if (e.code === 'KeyU') { Screens.banner(tr('Cheat: there are no upgrades to buy yet (the Lab opens in a later version).')); return true; }
+    if (e.code === 'KeyU') {
+      Campaign.buyAll();
+      if (inContract) run.cheated = true;
+      Screens.banner(tr('Cheat: every upgrade bought (from the next contract on). This is a test save now.'));
+      if (onMap) MapScreen.show(briefing);
+      return true;
+    }
     if (!inContract) return false;
     if (e.code === 'KeyR') {
       run.tint = !run.tint;
@@ -246,7 +260,12 @@ const Game = (() => {
       return true;
     }
     if (e.code === 'KeyF') { Contract.finishNow(run); Screens.banner(tr('Cheat: contract finished now. This run does not count.')); return true; }
-    if (e.code === 'KeyI') { Screens.banner(tr('Cheat: this contract has no incidents.')); return true; }
+    if (e.code === 'KeyI') {
+      const inc = Incidents.startNow(run);
+      if (inc) { run.cheated = true; Screens.banner(tr('Cheat: {name} starts with the next item. This run does not count.', { name: tr(inc.name) })); }
+      else Screens.banner(tr('Cheat: no incident is left in this contract.'));
+      return true;
+    }
     return false;
   }
 
@@ -261,9 +280,9 @@ const Game = (() => {
     const run = State.run;
     if (!playing() || !run) return;
     if (!State.paused) {
-      if (run.kind === 'sandbox') { if (!run.frozen) Stream.update(dt * run.knobs.speed); }
+      if (run.kind === 'sandbox') { if (!run.frozen) { Stream.update(dt * run.knobs.speed); Review.update(); } }
       else {
-        if (!State.held) Stream.update(dt);
+        if (!State.held) { Stream.update(dt); Review.update(); Incidents.update(dt); }
         Coach.update();
         if (Contract.update()) {
           if (!endAt) endAt = now + END_DELAY_MS;
@@ -301,7 +320,7 @@ const Game = (() => {
       b.addEventListener('click', () => setSound(b.dataset.sound === 'on')));
 
     // the map
-    $('mapLabBtn').addEventListener('click', labSoon);
+    $('mapLabBtn').addEventListener('click', () => openLab(() => go('map')));
     $('mapSheetBtn').addEventListener('click', () => openGlossary(null, () => go('map')));
     $('mapBackBtn').addEventListener('click', () => go('start'));
 
@@ -315,7 +334,8 @@ const Game = (() => {
     Hud.init({
       knobs: () => SandboxPanel.setOpen(!SandboxPanel.isOpen()),
       sound: () => setSound(!GameAudio.on),
-      pause
+      pause,
+      retrain: () => { if (State.run && Incidents.retrain(State.run)) Screens.banner(tr('Retraining on the new data: {s} s.', { s: RETRAIN_S })); }
     });
     LivePanel.onCard = cardFromPlay;
     $('liveSwap').addEventListener('click', (e) => {
@@ -326,12 +346,18 @@ const Game = (() => {
     Input.bindPlay($('beltCanvas'), {
       active: () => playing() && !State.paused && !!State.run,
       threshold: () => State.threshold,
-      setThreshold: (t) => { State.threshold = t; },
+      // the review band can never sit above the threshold: lowering the line pushes its edge down too
+      setThreshold: (t) => { State.threshold = t; if (State.review && State.review.low > t) State.review.low = t; },
       onHandle: Render.onHandle,
       onPlayArea: Render.onPlayArea,
       valueAt: Render.valueAt,
       span: Render.span,
-      tap: () => {},             // sends an item to the review desk from I05
+      // a tap on an item sends it to the review desk (a full desk flashes "Desk full")
+      tap: (x, y) => { if (State.review) Review.send(Render.itemAt(x, y)); },
+      tapTarget: (x, y) => !!State.review && !!Render.itemAt(x, y),
+      onBandHandle: Render.onBandHandle,
+      band: () => (State.review ? State.review.low : null),
+      setBand: (v) => Review.setLow(v),
       pause,
       nextChart: () => { Charts.nextTab(); Charts.update(true); }
     });
@@ -346,7 +372,7 @@ const Game = (() => {
       const esc = e.key === 'Escape';
       if (panel === 'pause' && (esc || e.code === 'KeyP')) { e.preventDefault(); resume(); return; }
       if (!esc) return;
-      const backs = { placeholder: 'backBtn', confirm: 'confirmNo', map: 'mapBackBtn', briefing: 'briefBackBtn', results: 'resMapBtn' };
+      const backs = { placeholder: 'backBtn', confirm: 'confirmNo', map: 'mapBackBtn', briefing: 'briefBackBtn', results: 'resMapBtn', lab: 'labBackBtn' };
       if (panel === 'glossary') { e.preventDefault(); Glossary.goBack(); }
       else if (backs[panel]) { e.preventDefault(); $(backs[panel]).click(); }
     });

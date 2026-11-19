@@ -2,7 +2,7 @@
 
 // ============================================================
 // AI Precision Recall Lab — the campaign's progress (spec 01 §2, §4, §14, §15; 05 §5): the balance, the
-// upgrades bought (I05), the stars and bests per contract and difficulty, the quiz bonuses paid, the coach
+// upgrades bought in the Lab (which opens after C01; buy emits purchase), the stars and bests per contract and difficulty, the quiz bonuses paid, the coach
 // marks seen, the contracts opened by a cheat and the cheated flag of the save. Unlocks: C01 is always open,
 // contract N+1 opens when contract N has at least one star on any level (Act 2 after C05, Act 3 after C09).
 // Money (01 §4): a contract's own money always counts (it can be negative, the balance never falls below $0);
@@ -30,7 +30,7 @@ const Campaign = (() => {
     const d = defaults();
     if (!raw || typeof raw !== 'object') return d;
     d.money = isNum(raw.money) ? Math.max(0, Math.round(raw.money * 100) / 100) : 0;
-    d.upgrades = ids(raw.upgrades);
+    d.upgrades = ids(raw.upgrades, (id) => UPGRADES.some((u) => u.id === id));
     d.coach = ids(raw.coach);
     d.lent = ids(raw.lent);
     d.opened = ids(raw.opened, (id) => !!CONTRACTS[id]);
@@ -122,6 +122,36 @@ const Campaign = (() => {
     return out;
   }
 
+  // ---------- the Lab (01 §5, 03 §3) ----------
+  // the Lab opens after C01 (a star on it on any level), or once the save has an upgrade (the cheat U)
+  function labOpen() { return bestStars('C01') >= 1 || data.upgrades.length > 0; }
+  function owns(id) { return data.upgrades.includes(id); }
+  // an upgrade's state in the Lab: 'bought', 'locked' (needs another one first), 'poor' (not enough money), 'buy'
+  function upgradeState(id) {
+    const u = UPGRADES.find((x) => x.id === id);
+    if (!u) return 'locked';
+    if (owns(id)) return 'bought';
+    if (u.needs && !owns(u.needs)) return 'locked';
+    return data.money >= UPGRADE_PRICES[id] ? 'buy' : 'poor';
+  }
+  // buys an upgrade for its price; kept for the whole campaign; emits purchase. false when it cannot be bought.
+  function buy(id) {
+    if (upgradeState(id) !== 'buy') return false;
+    data.money = Math.round((data.money - UPGRADE_PRICES[id]) * 100) / 100;
+    data.upgrades.push(id);
+    save();
+    GameEvents.emit('purchase', { upgrade: id });
+    return true;
+  }
+  // the cheat U: every upgrade, free; the save becomes a "test save"
+  function buyAll() {
+    for (const u of UPGRADES) if (!owns(u.id)) data.upgrades.push(u.id);
+    data.cheated = true;
+    save();
+  }
+  // the owned upgrade ids (a copy, for Contract.start and the briefing)
+  function upgrades() { return data.upgrades.slice(); }
+
   // ---------- coach marks, cheats ----------
   function coachSeen(id) { return data.coach.includes(id); }
   function markCoach(id) { if (!coachSeen(id)) { data.coach.push(id); save(); } }
@@ -133,6 +163,7 @@ const Campaign = (() => {
 
   return {
     defaults, sanitize, init, save, reset, record, bestStars, played, unlocked, nextOpen, totalStars, finish,
+    labOpen, owns, upgradeState, buy, buyAll, upgrades,
     coachSeen, markCoach, addMoney, open, markCheated,
     get exists() { return exists; }, get money() { return data.money; }, get cheated() { return data.cheated; },
     get data() { return data; }

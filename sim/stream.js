@@ -13,9 +13,10 @@
 // ============================================================
 
 const Stream = (() => {
-  // An item: { i, at (s from the start), y (1 = positive), z (hidden logit), s (raw score), amount? }.
+  // An item: { i, at (s from the start), y (1 = positive), z (hidden logit), e (its own standard normal draw:
+  // z = class mean + e), drift (of its moment), s (raw score), amount? }.
   // opts: { seed, count, rate (items per second, difficulty included), model ({ dPrime, prevalence, gamma,
-  // beta }), amounts (bool), schedule? (i → { prevalence?, drift? }, for incidents) }
+  // beta }), amounts (bool), schedule? (i → { prevalence?, drift?, rate? (a factor) }, for incidents) }
   function generate(opts) {
     const arrivals = Rng.stream(opts.seed, 'items.arrivals');
     const classes = Rng.stream(opts.seed, 'items.classes');
@@ -28,11 +29,13 @@ const Stream = (() => {
       const now = opts.schedule ? opts.schedule(i) : null;
       const prevalence = now && now.prevalence !== undefined ? now.prevalence : m.prevalence;
       const drift = now && now.drift !== undefined ? now.drift : 0;
-      at += arrivals.exponential(opts.rate);
+      // the exponential gap of a Poisson process: one uniform draw per item, scaled by the rate of the moment
+      at += arrivals.exponential(opts.rate * (now && now.rate !== undefined ? now.rate : 1));
       const y = classes.bernoulli(prevalence);
       // z = class mean + a standard normal draw: the same draw for item i whatever the class or the d'
-      const z = Model.logitMean(y, m.dPrime, drift) + noise.normal();
-      const item = { i, at, y, z, s: Model.rawScore(z, m) };
+      const e = noise.normal();
+      const z = Model.logitMean(y, m.dPrime, drift) + e;
+      const item = { i, at, y, z, e, drift, s: Model.rawScore(z, m) };
       if (opts.amounts) item.amount = amount(money, y);
       items.push(item);
     }
@@ -114,14 +117,17 @@ const Stream = (() => {
   }
 
   // The gate: the item is decided with the threshold of this moment and revealed (01 §1.3). The threshold is
-  // kept on the item (the results' sparkline). A contract prices the outcome (run.moneyOf) and checks its rules
-  // right after (run.afterGate: the outbreak, bankruptcy, the goal chip, the end); the sandbox has neither.
+  // kept on the item (the results' sparkline). With a review desk (sim/review.js) the run's decideAt sends the
+  // items of the band (and those tapped) to people instead. A contract prices the outcome (run.moneyOf) and
+  // checks its rules right after (run.afterGate: the outbreak, bankruptcy, the goal chip, the drift monitor,
+  // the end); the sandbox has neither.
   function gate(item) {
     const run = State.run;
-    const d = decide(item, State.threshold, run.key);
+    const d = run.decideAt ? run.decideAt(item) : decide(item, State.threshold, run.key);
     item.flagged = d.flagged;
     item.outcome = d.outcome;
     item.t = State.threshold;
+    item.reviewed = !!d.reviewed;
     item.money = run.moneyOf ? run.moneyOf(item, d.outcome) : 0;
     run.totals[d.outcome]++;
     run.count++;

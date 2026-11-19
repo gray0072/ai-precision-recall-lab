@@ -54,7 +54,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 | **Play** | §4. |
 | **Pause** | 01 §12. |
 | **Results** | 01 §3.4: stars (animated in one by one), money, goal, the final matrix and metrics table, the threshold sparkline with the hindsight-best line, the profit curve, the lesson card, buttons with the difficulty row for Retry. Failure ("Outbreak!" / "Bankrupt!") uses the same panel with a red header and no stars. |
-| **Lab** | 01 §5: model cards per family (AUC, mini ROC), the upgrade cards (price, effect, before → after, Buy). |
+| **Lab** | 01 §5: the balance; a model card per family (its scenarios with their AUC, a mini binormal ROC); the upgrade cards (price, effect, why it works in real ML, Buy / Bought / Needs … first / Not enough money). Pointing at an upgrade (hover or focus) shows "AUC 0.94 → 0.95" on the families it touches, and their mini ROC morphs to the new curve over the old one, faint. |
 | **Sandbox** | The play screen with the knobs panel (01 §7) instead of the HUD's contract chips: docked at the right on desktops, a drawer from the right on phones (closed at first); the HUD's ☰ button opens and closes it. |
 | **Cheat sheet** | A grid of cards (03 §4), two or three columns on desktop, one on phones; a card opens full-size with its live pile picture; a search field filters by name; the "Which metric?" flow as the first card. Opened from play, it is an overlay over the paused game with a Back button. |
 | **End card** | After C12: fireworks (`ui/fireworks.js`, as in `ivan`), total stars, the titles earned, "Play again on Hard?" |
@@ -63,8 +63,8 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 
 ### 4.1 Parts
 
-- **HUD** (top, chips, `pointer-events: none` except buttons, safe-area aware): contract name; items left (`142 / 300`); contract money (`+$86`, green/red); the goal chip (`Precision 0.93 ≥ 0.90`); special meters (outbreak `🦠 2 / 4`, desk queue `👥 3`, PSI); on the right the Retrain button (when available), sound 🔊/🔇 and pause.
-- **Belt area** (a `<canvas>`, devicePixelRatio-aware, capped at 2.5): the score axis on the left, the belt with items, the gate (a vertical scanner arch with a light that flashes the outcome colour), the pile on the right, the threshold line across belt and pile with the handle, the review band (a violet stripe with its own handle) and the ghost line (dashed). Incident banners and coach marks appear over it.
+- **HUD** (top, chips, `pointer-events: none` except buttons, safe-area aware): contract name; items left (`142 / 300`); contract money (`+$86`, green/red); the goal chip (`Precision 0.93 ≥ 0.90`); special meters (outbreak `🦠 2 / 4`, the review desk `👥 2 / 3` that flashes "Desk full" in red, the PSI chip with its value in the PSI colours and a small chart of the last values with the alert level dashed, the incident chip with its countdown and then its name in violet); on the right the Retrain button (when the monitor is there: "Retrain", red and pulsing after the alert, "Retraining… 9 s", "Retrained"), sound 🔊/🔇 and pause. On a phone held upright the chips wrap onto more rows; the buttons on the right keep their size.
+- **Belt area** (a `<canvas>`, devicePixelRatio-aware, capped at 2.5): with a review desk a column for the band's violet handle at the left edge (`review 0.35`), the score axis, the belt with items, the gate (a vertical scanner arch with a light that flashes the outcome colour), the pile on the right, the threshold line across belt and pile with the handle, the review band (a violet stripe with its own handle) and the ghost line (dashed). Incident banners and coach marks appear over it.
 - **Live panel** (DOM): the confusion matrix, the metric bars, the charts (each chart is a small `<canvas>`).
 
 ### 4.2 Layouts
@@ -102,7 +102,9 @@ Hand-drawn on Canvas 2D ([ADR-0003](../adr/0003-hand-drawn-canvas-charts.md)), i
 - PR: the curve, the base rate line dashed and labelled ("random: 0.04"), the dot and the ring, AP in the corner.
 - Profit: money against the threshold, zero line, the current threshold as a vertical accent line, the best threshold as a dashed one with its value.
 - Results sparkline: the threshold against the item number, the hindsight-best as a dashed horizontal line, incident moments as small marks.
-- Reliability diagram (sandbox, results of calibrated contracts): bars of the observed share per bin against the diagonal.
+- Reliability diagram (sandbox, results of calibrated contracts): bars of the observed share per bin against the diagonal. In the sandbox it is a fourth chart tab ("Calibration") on the rolling window, of the raw score or of p. On the results of a contract with a base rate shift two bars per bin: before the shift (grey) and after it (violet).
+- "Recent" curves (with the drift monitor): ROC and PR of the rolling window, dashed violet, next to the model's; the ROC corner also prints the recent AUC.
+- Results with incidents: a small table per base rate shift or drift with precision, recall, FPR and the share of positives before it and after it ramped in.
 - Charts redraw only when something changed (the threshold, new items, a new validation set), not every frame.
 
 ## 7. Sound
