@@ -55,7 +55,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 | **Pause** | 01 §12. |
 | **Results** | 01 §3.4: stars (animated in one by one), money, goal, the final matrix and metrics table, the threshold sparkline with the hindsight-best line, the profit curve, the lesson card, buttons with the difficulty row for Retry. Failure ("Outbreak!" / "Bankrupt!") uses the same panel with a red header and no stars. |
 | **Lab** | 01 §5: model cards per family (AUC, mini ROC), the upgrade cards (price, effect, before → after, Buy). |
-| **Sandbox** | The play screen with the knobs drawer (01 §7) instead of the HUD's contract chips. |
+| **Sandbox** | The play screen with the knobs panel (01 §7) instead of the HUD's contract chips: docked at the right on desktops, a drawer from the right on phones (closed at first); the HUD's ☰ button opens and closes it. |
 | **Cheat sheet** | A grid of cards (03 §4), two or three columns on desktop, one on phones; a card opens full-size with its live pile picture; a search field filters by name; the "Which metric?" flow as the first card. Opened from play, it is an overlay over the paused game with a Back button. |
 | **End card** | After C12: fireworks (`ui/fireworks.js`, as in `ivan`), total stars, the titles earned, "Play again on Hard?" |
 
@@ -71,7 +71,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 
 | Viewport | Layout |
 |---|---|
-| Desktop / tablet landscape (width ≥ 1000 px) | Belt area across the top ~60 % of the height (belt ~65 % of its width, pile ~35 %); the live panel below in one row: matrix · metric bars · ROC · PR (· profit on Easy). |
+| Desktop / tablet landscape (width ≥ 1000 px, height ≥ 500 px) | Belt area across the top ~60 % of the height (belt ~65 % of its width, pile ~35 %); the live panel below in one row: matrix · metric bars · ROC · PR (· profit on Easy and in the sandbox). When the charts would get less than 200 px each (a narrower window, or the sandbox's knobs docked), they go under tabs, one at a time. |
 | Phone landscape (height < 500 px) | Belt area on the left ~62 % of the width, full height under the HUD; a right column with the matrix and the metric bars; the charts behind a "Charts" tab button that swaps the column's content (ROC / PR / profit). |
 | Phone portrait | Belt area on top ~45 % of the height; under it the matrix and the bars side by side; under them one chart at a time with tabs ROC · PR · Profit. The handle is at the right edge of the belt area, the review handle at its left edge. |
 

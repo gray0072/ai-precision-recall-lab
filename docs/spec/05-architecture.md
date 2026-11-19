@@ -52,7 +52,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── sandbox.js          the sandbox's knobs applied to the model and the stream
 │   └── demo.js             the attract demo's threshold bot
 ├── art/
-│   ├── palette.js          the colour code shared with styles.css (04 §1)
+│   ├── palette.js          the colour code shared with styles.css (04 §1), the hatching of wrong outcomes
 │   ├── items.js            item drawings per scenario (hidden / revealed), score badges
 │   ├── clients.js          client avatars
 │   └── flag-gb.svg, flag-ru.svg, flag-se.svg   the language switcher's flags (from ivan, in I07)
@@ -77,6 +77,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── load.js             loads constants, data and sim files into a vm context (plain scripts)
 │   ├── smoke.test.js       the scripts load; the state and the difficulty table are there
 │   ├── stream.test.js      the samplers, sub-streams, determinism, amounts, the gate
+│   ├── sandbox.test.js     the belt (arrivals, the gate, the pile window), the sandbox's knobs, Generate / Clear / Step
 │   ├── model.test.js       d', the posterior, AUC = Φ(d'/√2), Platt scaling, calibration keeps the ranking
 │   ├── metrics.test.js     every metric, empty denominators, ROC = Mann–Whitney, AP = scikit-learn, profit curve
 │   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
@@ -111,7 +112,7 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 ## 4. State and events
 
 - **Shared state** lives in `sim/state.js` as plain globals (`State.run`, `State.belt`, `State.pile`, `State.threshold`, `State.review`, `State.difficulty`, `State.screen`); other files read and change it there.
-- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived`, `itemDecided {item, outcome, money}`, `goalChanged {state}`, `incidentWarning {kind, inS}`, `incidentStarted`, `driftAlert {psi}`, `outbreak`, `deskFull`, `retrainDone`, `contractEnded {result}`, `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
+- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}`, `incidentWarning {kind, inS}`, `incidentStarted`, `driftAlert {psi}`, `outbreak`, `deskFull`, `retrainDone`, `contractEnded {result}`, `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
 - **The main loop stays thin:** each frame (`requestAnimationFrame`, limited to 60 fps) `game.js` reads the input into the threshold(s), calls `Stream.update(dt)`, `Review.update(dt)`, `Incidents.update(dt)`, `Contract.update()` in this order, then `Render.frame()` and, when dirty, the live panel and the charts.
 - **Determinism:** all randomness comes from `core/rng.js` streams seeded per attempt (02 §2.2); `Math.random` is not used in `sim/`.
 
@@ -125,7 +126,7 @@ Every key starts with `prLab.` (the Pages origin `gray0072.github.io` is shared 
 | `prLab.sound` | `on` / `off` |
 | `prLab.difficulty` | `easy` / `medium` / `hard` |
 | `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], cheated }` |
-| `prLab.sandbox.v1` | the sandbox's knobs |
+| `prLab.sandbox.v1` | the sandbox's knobs: `{ scenario, prevalence, dPrime, calibrated, showClass, speed, prices: { TP, FP, FN, TN }, formulas, threshold }`, checked field by field on load (`Sandbox.sanitize`) |
 
 A new save format gets a new key suffix (`.v2`) and a migration from the old one.
 

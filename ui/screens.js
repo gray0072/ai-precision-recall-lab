@@ -4,15 +4,15 @@
 // AI Precision Recall Lab — the overlay screens (spec 04 §3): showing and hiding the panels of #overlay,
 // moving the focus between a panel's buttons with the arrow keys and pressing its default button with
 // Space / Enter (from fish-frenzy's core/input.js), the short banner, and the start screen (title,
-// Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, How to play). I01 also has
-// a placeholder panel for the screens that come later (map, sandbox, cheat sheet).
+// Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, How to play), the pause
+// dialog (01 §12) and a placeholder panel for the screens that come later (map, cheat sheet).
 // Reads State and Store; game.js wires the buttons to the flow.
 // ============================================================
 
 const Screens = (() => {
   const $ = (id) => document.getElementById(id);
   const overlay = $('overlay');
-  const panels = { start: $('startPanel'), placeholder: $('placeholderPanel') };
+  const panels = { start: $('startPanel'), pause: $('pausePanel'), placeholder: $('placeholderPanel') };
 
   function show(name) {
     overlay.hidden = false;
@@ -98,7 +98,11 @@ const Screens = (() => {
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     $('difficultyNote').textContent = DIFFICULTY_NOTES[State.difficulty]();
-    document.querySelectorAll('#soundRow [data-sound]').forEach((b) => {
+    renderSound('#soundRow');
+  }
+
+  function renderSound(row) {
+    document.querySelectorAll(row + ' [data-sound]').forEach((b) => {
       const on = (b.dataset.sound === 'on') === GameAudio.on;
       b.classList.toggle('on', on);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -117,6 +121,17 @@ const Screens = (() => {
     show('start');
   }
 
+  // ---------- the pause dialog (01 §12) ----------
+  // In the sandbox "Restart" clears the belt and the pile and "Quit" leads to the start screen; a contract
+  // (I04) restarts the contract and quits to the map.
+  function showPause() {
+    const sandbox = State.run && State.run.kind === 'sandbox';
+    $('restartBtn').textContent = sandbox ? tr('Clear and restart') : tr('Restart contract');
+    $('quitBtn').textContent = sandbox ? tr('Quit to menu') : tr('Quit to map');
+    renderSound('#pauseSoundRow');
+    show('pause');
+  }
+
   // ---------- the placeholder for screens that come in later iterations ----------
   function showPlaceholder(title, text) {
     $('placeholderTitle').textContent = title;
@@ -124,5 +139,5 @@ const Screens = (() => {
     show('placeholder');
   }
 
-  return { show, hide, banner, showStart, renderStart, toggleHelp, showPlaceholder };
+  return { show, hide, visiblePanel, banner, showStart, renderStart, renderSound, toggleHelp, showPause, showPlaceholder };
 })();

@@ -2,7 +2,7 @@
 
 A browser game that teaches the metrics of binary classification by letting you draw the line yourself. Letters, passengers, bolts and card payments ride a conveyor belt at the height of their model score; you drag one threshold line, every item is revealed at the gate and falls onto a pile that *is* the confusion matrix, and precision, recall, F1, the ROC and the PR curves react as you move. Twelve client contracts with their own prices for mistakes, a lab of model upgrades, a sandbox and a cheat sheet. Runs on GitHub Pages and on a phone; English first, Russian and Swedish later.
 
-> **Status:** early skeleton: the start screen (difficulty, sound, how to play), installable as an app; the belt, the campaign, the sandbox and the cheat sheet are still placeholders. The game is built iteration by iteration, see the [roadmap](docs/plan/roadmap.md).
+> **Status:** the sandbox is playable: the belt, the threshold, the pile, the live confusion matrix, the metric bars with their formulas, and the ROC, PR and profit curves, on desktops and phones; installable as an app. The campaign and the cheat sheet are still placeholders. The game is built iteration by iteration, see the [roadmap](docs/plan/roadmap.md).
 
 ## The four numbers in one minute
 
@@ -19,6 +19,7 @@ Raise the threshold: fewer alarms, precision usually up, recall always down. The
 
 - **Mouse and keyboard:** drag the threshold handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (Shift: 0.05), Page Up / Page Down by 0.10. Esc or P pauses. In menus the arrow keys move between buttons and Space / Enter press the highlighted one.
 - **Touch:** put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items it is judging. The large handle on the right edge can be dragged directly. On phones the game goes fullscreen (iPhone Safari stays windowed and still works).
+- **Sandbox:** the play screen without money or goals. Its knobs (the ☰ button; docked on the right on a desktop) pick the scenario, the base rate, the model's separation d′ (with the AUC it gives), calibrated scores, showing the true class on the belt, the speed, the prices of the four outcomes (the profit curve and, with calibrated scores, the cost-optimal line); **Generate 1 000** fills the pile at once, **Formula view** writes every metric's formula with the live numbers. Point at a metric bar (or tap it) to see which cells of the matrix and which part of the pile it is made of. Everything is remembered.
 - **Difficulty** (on the start screen, remembered): **Easy** — a slower belt, a better model, a faint hint of the true class, the cost-optimal line always shown, softer goals; **Medium** — the contracts as written; **Hard** — a faster belt, a weaker model, stricter goals, no warning before incidents.
 - **Sound** On / Off on the start screen (and in the pause dialog), remembered.
 

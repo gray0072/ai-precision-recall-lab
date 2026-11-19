@@ -176,5 +176,28 @@ const Metrics = (() => {
     }));
   }
 
-  return { emptyCounts, counts, tally, window, sums, compute, value, sweep, roc, rocAuc, auc, pr, averagePrecision, profitCurve, reliability };
+  // The model's curves for the live panel (02 §4), on the validation set and the raw score (ADR-0004):
+  // the sweep (the matrix at every raw threshold, for the operating point), ROC with its AUC, PR with AP and
+  // the validation set's prevalence (the PR chart's "random" line). null parts when a class is missing.
+  function modelCurves(val) {
+    const sw = sweep(val, 's');
+    const rocPts = roc(val, 's');
+    return {
+      sweep: sw, roc: rocPts, auc: rocAuc(rocPts), pr: pr(val, 's'), ap: averagePrecision(val, 's'),
+      prevalence: val.length ? sums(sw[0]).P / val.length : null
+    };
+  }
+
+  // The operating point at a raw threshold: the model curve's point there (the filled dot on ROC and PR).
+  // precision is null when nothing is flagged; fpr / tpr are null without negatives / positives.
+  function operatingPoint(curves, rawT) {
+    const c = curves.sweep[clamp(hundredths(rawT), 0, GRID - 1)];
+    const m = compute(c);
+    return { t: rawT, fpr: m.fpr, tpr: m.recall, recall: m.recall, precision: m.precision };
+  }
+
+  return {
+    emptyCounts, counts, tally, window, sums, compute, value, sweep, roc, rocAuc, auc, pr, averagePrecision,
+    profitCurve, reliability, modelCurves, operatingPoint
+  };
 })();

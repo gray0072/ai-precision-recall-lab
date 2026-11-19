@@ -8,7 +8,7 @@ How the game plays. The math behind every number is in [02-model-and-metrics.md]
 
 - Items enter at the left edge of the belt and ride to the right at a steady speed (`BELT_TRAVEL_S`, the time from entry to the gate: 6 s on Medium).
 - The **vertical position of an item is its model score**: 0 at the bottom, 1 at the top. A score axis with ticks 0, 0.25, 0.5, 0.75, 1 runs along the left edge. Items keep their height for the whole ride; a small random horizontal spacing keeps them from overlapping.
-- Each item carries a **score badge** (`0.73`, two decimals). Until the calibration upgrade (§5) the badge says "score"; afterwards it says "p" and the number is a calibrated probability (02 §2.3).
+- Each item carries a **score badge** (`0.73`, two decimals). The axis is titled "model score" and the handle reads `t = 0.62` until the calibration upgrade (§5); afterwards the axis says "calibrated p", the heights and the badges are calibrated probabilities (02 §2.3) and the handle reads `p ≥ 0.62`. (A word on every badge was too much clutter for a belt of 30 items, so the axis and the handle carry it.)
 - **The true class is hidden while the item rides** (a neutral grey drawing: a closed envelope, a passenger in a coat, a bolt in a box), except on Easy, where a faint tint gives it away (§10).
 - Items arrive as a Poisson stream with the contract's rate (items per second × the difficulty factor); a contract has a fixed number of items (`items` in the contract table) and ends when the last one has passed the gate.
 
@@ -26,8 +26,8 @@ How the game plays. The math behind every number is in [02-model-and-metrics.md]
 
 ### 1.4 The pile
 
-- Right after the gate the item flies onto **the pile**: a sideways histogram on the same vertical score axis as the belt, with bins 0.05 wide (20 rows). Each item becomes a small square in its score row, stacked from the gate outwards; positives on one side of the row's axis line, negatives on the other (a "mirrored" histogram), so the two class distributions are visible as two humps.
-- The threshold line continues across the pile and splits it into four regions that **are** the confusion matrix: positives above the line = TP, negatives above = FP, positives below = FN, negatives below = TN. Moving the line re-colours the regions at once, so the player sees what the same past items *would* have been at another threshold.
+- Right after the gate the item flies onto **the pile**: a sideways histogram on the same vertical score axis as the belt, with bins 0.05 wide (20 rows). Each item becomes a small square in its score row; **positives stack to the left of the pile's axis line, negatives to the right** (a "mirrored" histogram, in the order of the matrix's columns), so the two class distributions are visible as two humps. As rows fill up the squares shrink and stack in several lines per row, outwards from the axis; within a row the higher scores sit higher.
+- The threshold line continues across the pile and splits it into four regions that **are** the confusion matrix, laid out like its cells: TP top left, FP top right, FN bottom left, TN bottom right (each region is labelled next to the line). Moving the line re-colours the regions at once, so the player sees what the same past items *would* have been at another threshold.
 - The pile holds the last `PILE_WINDOW` items (200); older squares fade out. This is the **rolling window** that the live metrics are computed on (02 §3.4); the contract's final result uses all items with the decision actually made at their gate.
 
 ### 1.5 The live panel
@@ -120,16 +120,17 @@ Incidents change the stream during a contract. Each contract lists its incidents
 
 The sandbox is the play screen without money, goals or a fixed length. A side panel (a drawer on phones) has:
 
-- **Scenario** picker (the drawings and names of the six scenarios) — or "Abstract" (dots instead of drawings).
+- **Scenario** picker (the drawings and names of the scenarios) — or "Abstract" (dots instead of drawings). A scenario sets the base rate and `d'` to its own (03 §1) and brings its temperament `γ`, `β`. Search Ranker joins with the Top-k mode (I06).
 - **Base rate** (prevalence) 0.5 %–50 %, logarithmic slider.
 - **Separation** `d'` 0–4 (with the AUC it gives shown next to it).
-- **Calibrated scores** on/off; **Show true class on the belt** on/off.
-- **Speed** 0.25×–4×, **Pause** and **Step** (one item to the gate).
+- **Calibrated scores** on/off: the heights, the badges and the threshold become the calibrated `p` (Platt scaling fitted on the validation set, 02 §2.3), and the cost-optimal **ghost line** `p*` for the sandbox's prices appears (02 §5.1; a raw score is not a probability, so without calibration there is no ghost line, only the profit curve's best). Switching it keeps the line at the same items: the threshold's number moves to the other axis. **Show true class on the belt** on/off.
+- **Speed** 0.25× / 0.5× / 1× / 2× / 4× (scales the run's time), **Pause belt** and **Step** (ride until the next item has been decided).
+- **Prices per item** for TP / FP / FN / TN (whole dollars, −20 … +20, default +1 / −1 / −1 / 0): the profit curve and the ghost line use them; the panel names the cost-optimal `p*`.
 - **Review band** on/off; **Top-k mode** on/off (02 §7).
 - **Generate 1 000 at once**: fills the pile instantly (the pile window grows to 1 000 for this), so the humps and the curves are smooth; **Clear**.
 - **Formula view** toggle: every metric bar shows its formula with the live numbers all the time, not only on hover.
 
-Everything in the sandbox is remembered between visits (05 §5).
+A knob that changes the model (scenario, base rate, separation) regenerates the validation set from the same seed, so the curves morph smoothly as a slider moves; items already made keep their scores (Clear starts afresh). Everything in the sandbox, the threshold included, is remembered between visits (05 §5).
 
 ## 8. Cheat sheet
 
@@ -179,7 +180,7 @@ The split-screen joystick of the `ivan` games does not fit a game with one verti
 
 ## 12. Pause
 
-The pause dialog: **Continue** (default; Esc / P also resume), **Restart contract**, **Cheat sheet**, **Sound** On / Off, **Quit to map** (the contract is lost, no money). While paused the belt, the stream and incident timers stop.
+The pause dialog: **Continue** (default; Esc / P also resume), **Restart contract**, **Cheat sheet**, **Sound** On / Off, **Quit to map** (the contract is lost, no money). While paused the belt, the stream and incident timers stop. In the sandbox the two read **Clear and restart** (empties belt and pile) and **Quit to menu**.
 
 ## 13. Tutorial
 

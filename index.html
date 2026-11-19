@@ -15,11 +15,60 @@
 <link rel="manifest" href="manifest.webmanifest?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <meta name="theme-color" content="#0d1b2a">
-<link rel="stylesheet" href="styles.css?v=1">
+<link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 
 <div id="banner" role="status" aria-live="polite"></div>
+
+<div id="play" hidden>
+  <div id="hud">
+    <div class="hudLeft">
+      <div class="chip" id="hudTitle"></div>
+      <div class="chip" id="hudCount"></div>
+    </div>
+    <div class="hudRight">
+      <button class="round" id="knobsBtn" aria-controls="sandboxPanel" aria-expanded="false">☰</button>
+      <button class="round" id="soundBtn">🔊</button>
+      <button class="round" id="pauseBtn">⏸</button>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="beltCanvas"></canvas>
+    <div id="tSlider" role="slider" tabindex="-1" aria-label="Threshold" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.50"></div>
+  </div>
+
+  <div id="live">
+    <button class="btn toggle" id="liveSwap" data-i18n>Charts</button>
+    <div class="liveBox" id="matrixBox">
+      <div class="boxTitle"><span data-i18n>Confusion matrix</span> <span class="fine" id="matrixNote"></span></div>
+      <table id="matrix">
+        <tr><th class="corner"><span data-i18n>model</span> ↓ <span data-i18n>truth</span> →</th><th class="pos" data-i18n>Positive</th><th class="neg" data-i18n>Negative</th></tr>
+        <tr><th data-i18n>Flagged</th><td data-cell="TP"></td><td data-cell="FP"></td></tr>
+        <tr><th data-i18n>Passed</th><td data-cell="FN"></td><td data-cell="TN"></td></tr>
+      </table>
+    </div>
+    <div class="liveBox" id="barsBox"></div>
+    <div class="liveBox" id="chartsBox">
+      <div class="chartTabs" role="tablist">
+        <button class="btn toggle" data-tab="roc">ROC</button>
+        <button class="btn toggle" data-tab="pr">PR</button>
+        <button class="btn toggle" data-tab="profit" data-i18n>Profit</button>
+      </div>
+      <div class="charts">
+        <div class="chart" data-chart="roc"><canvas></canvas></div>
+        <div class="chart" data-chart="pr"><canvas></canvas></div>
+        <div class="chart" data-chart="profit"><canvas></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <aside id="sandboxPanel" hidden></aside>
+</div>
+
+<div id="tip" role="tooltip" hidden></div>
+
 
 <div id="overlay">
   <div class="panel" id="startPanel">
@@ -51,8 +100,26 @@
       <p data-i18n>Items ride a conveyor belt at the height of their <b>model score</b>: 0 at the bottom, 1 at the top. One line, your <b>threshold</b>, decides: everything at or above it is flagged as <b class="pos">positive</b> (spam, fever, fraud…), everything below it passes as <b class="neg">negative</b>.</p>
       <p data-i18n>At the gate each item is revealed and drops onto the pile, and the pile <b>is</b> the confusion matrix: <b>TP</b> and <b>FP</b> above the line, <b>FN</b> and <b>TN</b> below it. Precision, recall and the ROC and PR curves follow every item.</p>
       <p data-i18n>Each client pays for right answers and fines you for mistakes. Find the line that earns the most and still meets the client's goal.</p>
+      <p data-i18n>Point at a metric bar (or tap it) to see its formula with the live numbers and which cells of the matrix and which part of the pile it is made of.</p>
       <p data-i18n><b>Mouse and keyboard:</b> drag the handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (with Shift by 0.05), Page Up / Page Down by 0.10. Esc or P pauses.</p>
       <p data-i18n><b>Touch:</b> put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items. The large handle on the right can be dragged directly. On phones the game goes fullscreen.</p>
+    </div>
+  </div>
+
+  <div class="panel" id="pausePanel" hidden>
+    <h1 data-i18n>Paused</h1>
+    <div class="btnCol">
+      <button class="btn big default" id="resumeBtn" data-i18n>Continue</button>
+      <button class="btn" id="restartBtn"></button>
+      <button class="btn" id="pauseSheetBtn" data-i18n>Cheat sheet</button>
+    </div>
+    <p class="label" data-i18n>Sound</p>
+    <div class="btnRow" id="pauseSoundRow">
+      <button class="btn toggle" data-sound="on" data-i18n>On</button>
+      <button class="btn toggle" data-sound="off" data-i18n>Off</button>
+    </div>
+    <div class="btnRow">
+      <button class="btn secondary" id="quitBtn"></button>
     </div>
   </div>
 
@@ -65,8 +132,8 @@
   </div>
 </div>
 
-<script src="constants.js?v=2"></script>
-<script src="data/icons.js?v=1"></script>
+<script src="constants.js?v=3"></script>
+<script src="data/icons.js?v=2"></script>
 <script src="data/scenarios.js?v=1"></script>
 <script src="core/utils.js?v=1"></script>
 <script src="core/rng.js?v=1"></script>
@@ -74,16 +141,26 @@
 <script src="core/i18n.js?v=1"></script>
 <script src="core/storage.js?v=1"></script>
 <script src="core/audio.js?v=1"></script>
-<script src="core/input.js?v=1"></script>
+<script src="core/input.js?v=2"></script>
 <script src="core/cursor.js?v=1"></script>
 <script src="core/icons.js?v=1"></script>
 <script src="core/update.js?v=1"></script>
-<script src="sim/state.js?v=1"></script>
+<script src="sim/state.js?v=2"></script>
 <script src="sim/model.js?v=1"></script>
-<script src="sim/stream.js?v=1"></script>
-<script src="sim/metrics.js?v=1"></script>
+<script src="sim/stream.js?v=2"></script>
+<script src="sim/metrics.js?v=2"></script>
 <script src="sim/contract.js?v=1"></script>
-<script src="ui/screens.js?v=1"></script>
-<script src="game.js?v=1"></script>
+<script src="sim/sandbox.js?v=1"></script>
+<script src="art/palette.js?v=1"></script>
+<script src="art/items.js?v=1"></script>
+<script src="render/render.js?v=1"></script>
+<script src="render/belt.js?v=1"></script>
+<script src="render/pile.js?v=1"></script>
+<script src="ui/screens.js?v=2"></script>
+<script src="ui/hud.js?v=1"></script>
+<script src="ui/livepanel.js?v=1"></script>
+<script src="ui/charts.js?v=1"></script>
+<script src="ui/sandboxpanel.js?v=1"></script>
+<script src="game.js?v=2"></script>
 </body>
 </html>

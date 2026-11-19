@@ -65,3 +65,20 @@ const AMOUNT_MAX = 5000;
 const FRAUD_TP = 0;            // $ for a blocked fraud (the loss is prevented)
 const FRAUD_FP = -5;           // $ for a blocked genuine payment (an angry customer, the commission lost)
 const FRAUD_COMMISSION = 0.02; // a passed genuine payment earns this share of its amount; a passed fraud costs the amount
+
+// ---------- Play screen and controls (spec 01 §1, §11) ----------
+const THRESHOLD_STEP = 0.01;        // ↑ / ↓, W / S and one wheel notch move the threshold this much
+const THRESHOLD_STEP_SHIFT = 0.05;  // … with Shift
+const THRESHOLD_STEP_PAGE = 0.10;   // Page Up / Page Down
+const TAP_SLOP_PX = 8;              // a touch that moved less than this (CSS px) is a tap, not a drag
+const WHEEL_NOTCH_PX = 50;          // wheel deltaY (px) that counts as one notch; a trackpad's small deltas add up
+
+// ---------- Sandbox (spec 01 §7) ----------
+const SANDBOX_RATE = 2;             // items per second at ×1 (with BELT_TRAVEL_S that is about 12 on the belt)
+const SANDBOX_GENERATE = 1000;      // "Generate 1 000 at once": items added, and the pile window while they are there
+const SANDBOX_PREVALENCE_MIN = 0.005;   // the base rate slider, logarithmic
+const SANDBOX_PREVALENCE_MAX = 0.5;
+const SANDBOX_DPRIME_MAX = 4;       // the separation slider runs 0 … this
+const SANDBOX_SPEEDS = [0.25, 0.5, 1, 2, 4];   // the speed slider's stops (× sim time)
+const SANDBOX_PRICE_MAX = 20;       // the sandbox's prices per outcome are whole $ in −this … +this
+const SANDBOX_PRICES = { TP: 1, FP: -1, FN: -1, TN: 0 };   // the sandbox's default prices (profit curve, ghost line)

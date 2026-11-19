@@ -6,8 +6,10 @@
 // classes, hidden logits, scores and, for value-weighted scenarios, payment amounts. Each of those comes from
 // its own named sub-stream, so a change to one (e.g. a base rate schedule) never reshuffles the others; the
 // validation set has its own stream too. The gate decides an item: flagged = score ≥ t on the 0.01 grid.
-// I03 adds the arrivals onto the belt (Stream.update). No drawing, no DOM, no sound.
-// Used by sim/contract.js, the sandbox, tools/balance-check.js and the tests.
+// The sandbox's endless source draws items one at a time from the same sub-streams. Stream.update moves the
+// run's clock: items arrive onto the belt, ride for travelS seconds, and at the gate they are decided with the
+// threshold of that moment and land on the pile (emitting itemArrived / itemDecided). No drawing, no DOM,
+// no sound. Used by sim/contract.js, sim/sandbox.js, game.js, tools/balance-check.js and the tests.
 // ============================================================
 
 const Stream = (() => {
@@ -73,5 +75,73 @@ const Stream = (() => {
     return { flagged, outcome: outcome(flagged, item.y) };
   }
 
-  return { generate, validation, calibrate, outcome, decide };
+  // An endless source (the sandbox): the same four sub-streams as generate(), one item per call, made with the
+  // model current at that moment. Returns next(rate, model) → { i, gap (s since the previous arrival), y, z, s,
+  // amount }. The amount is always drawn (the sub-streams stay aligned) and used only by value-weighted scenarios.
+  function endless(seed) {
+    const arrivals = Rng.stream(seed, 'items.arrivals');
+    const classes = Rng.stream(seed, 'items.classes');
+    const noise = Rng.stream(seed, 'items.scores');
+    const money = Rng.stream(seed, 'items.amounts');
+    let i = 0;
+    return function next(rate, m) {
+      const gap = arrivals.exponential(rate);
+      const y = classes.bernoulli(m.prevalence);
+      const z = Model.logitMean(y, m.dPrime) + noise.normal();
+      return { i: i++, gap, y, z, s: Model.rawScore(z, m), amount: amount(money, y) };
+    };
+  }
+
+  // ---------- the belt (01 §1.1–1.4): State.run's clock, arrivals, the gate, the pile ----------
+
+  // how far an item has ridden: 0 at entry, 1 at the gate
+  function progress(item) { return (State.run.clock - item.enter) / State.run.travelS; }
+
+  // run time until the next item reaches the gate (the one in front, or the one still to arrive); Infinity if none
+  function timeToGate() {
+    const run = State.run;
+    if (!run) return Infinity;
+    if (State.belt.length) return Math.max(0, State.belt[0].enter + run.travelS - run.clock);
+    return run.next ? Math.max(0, run.next.at - run.clock) + run.travelS : Infinity;
+  }
+
+  // a decided item joins the pile; the pile keeps the last run.window items (the rolling window, 02 §3.4)
+  function toPile(item) {
+    const pile = State.pile;
+    pile.push(item);
+    if (pile.length > State.run.window) pile.splice(0, pile.length - State.run.window);
+    State.pileVersion++;
+  }
+
+  // The gate: the item is decided with the threshold of this moment and revealed (01 §1.3).
+  // Money comes with the contracts (I04); the sandbox has none.
+  function gate(item) {
+    const run = State.run;
+    const d = decide(item, State.threshold, run.key);
+    item.flagged = d.flagged;
+    item.outcome = d.outcome;
+    run.totals[d.outcome]++;
+    run.count++;
+    toPile(item);
+    GameEvents.emit('itemDecided', { item, outcome: d.outcome, money: 0 });
+  }
+
+  // Advances the run by dt seconds of run time: arrivals enter the belt at their own arrival time (so the
+  // spacing does not depend on the frame rate), and every item that has ridden travelS seconds is decided.
+  // The belt is first in, first out: every item rides the same time.
+  function update(dt) {
+    const run = State.run;
+    if (!run) return;
+    run.clock += dt;
+    while (run.next && run.next.at <= run.clock) {
+      const item = run.next;
+      item.enter = item.at;
+      State.belt.push(item);
+      GameEvents.emit('itemArrived', { item });
+      run.next = run.source();
+    }
+    while (State.belt.length && run.clock - State.belt[0].enter >= run.travelS - 1e-9) gate(State.belt.shift());
+  }
+
+  return { generate, validation, calibrate, outcome, decide, endless, progress, timeToGate, toPile, gate, update };
 })();
