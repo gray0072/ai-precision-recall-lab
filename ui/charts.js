@@ -7,8 +7,11 @@
 // The curves come from the validation set (the model as the team knows it), on the raw score (ADR-0004);
 // the filled dot is the operating point at the current threshold and slides along the curve as the line
 // moves; the hollow ring is the rolling window at the same threshold and jitters around it (sampling noise).
-// On narrow panels one chart shows at a time, under tabs. Charts redraw only when something changed.
-// Reads State; used by game.js (update, resize, tabs).
+// On narrow panels one chart shows at a time, under tabs; in a contract the profit curve shows only where the
+// difficulty allows it (Easy). Charts redraw only when something changed. The results screen's charts are here
+// too: the threshold over time with the hindsight-best line (sparkline) and the profit curve of the contract's
+// stream with the player's average and the best threshold.
+// Reads State; used by game.js (update, resize, tabs) and ui/results.js.
 // ============================================================
 
 const Charts = (() => {
@@ -22,6 +25,8 @@ const Charts = (() => {
   });
   let tab = 'roc';
   let key = '';
+  let profitShown = true;
+  const shownIds = () => IDS.filter((id) => id !== 'profit' || profitShown);
 
   function resize() {
     for (const id of IDS) {
@@ -37,8 +42,16 @@ const Charts = (() => {
 
   function visible(id) { return charts[id].el.offsetParent !== null; }
 
+  // the profit curve during play: always in the sandbox, in a contract only on Easy (01 §10)
+  function showProfit(on) {
+    profitShown = on;
+    charts.profit.el.hidden = !on;
+    document.querySelector('#chartsBox [data-tab="profit"]').hidden = !on;
+    if (!on && tab === 'profit') tab = 'roc';
+  }
+
   function setTab(id) {
-    tab = IDS.includes(id) ? id : 'roc';
+    tab = shownIds().includes(id) ? id : 'roc';
     document.querySelectorAll('#chartsBox .chart').forEach((el) => el.classList.toggle('on', el.dataset.chart === tab));
     document.querySelectorAll('#chartsBox [data-tab]').forEach((b) => {
       const on = b.dataset.tab === tab;
@@ -47,7 +60,7 @@ const Charts = (() => {
     });
     resize();
   }
-  function nextTab() { setTab(IDS[(IDS.indexOf(tab) + 1) % IDS.length]); }
+  function nextTab() { const ids = shownIds(); setTab(ids[(ids.indexOf(tab) + 1) % ids.length]); }
 
   // ---------- drawing helpers ----------
   // a square plot area inside the chart, with room for the title and the axis labels
@@ -314,5 +327,106 @@ const Charts = (() => {
     IDS.forEach((id) => ro.observe(charts[id].el));
   }
 
-  return { resize, update, setTab, nextTab, get tab() { return tab; } };
+  // ---------- the results screen ----------
+  // a canvas at its CSS size, DPR-aware; returns { ctx, w, h }
+  function fit(canvas) {
+    const r = canvas.getBoundingClientRect();
+    const w = Math.max(10, r.width), h = Math.max(10, r.height), sc = canvasScale(w, h);
+    canvas.width = Math.round(w * sc);
+    canvas.height = Math.round(h * sc);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(sc, 0, 0, sc, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
+
+  // The threshold against the item number (01 §3.4), with the hindsight-best fixed threshold dashed.
+  function sparkline(canvas, r) {
+    const { ctx, w, h } = fit(canvas);
+    const x0 = 30, x1 = w - 8, y0 = 8, y1 = h - 18;
+    const X = (i) => x0 + (r.items > 1 ? i / (r.items - 1) : 0) * (x1 - x0), Y = (t) => y1 - t * (y1 - y0);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+    ctx.fillStyle = P.muted;
+    ctx.font = '10px ' + FONT;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (const t of [0, 0.5, 1]) ctx.fillText(String(t), x0 - 4, Y(t));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(tr('item'), (x0 + x1) / 2, y1 + 4);
+    ctx.textAlign = 'left';
+    ctx.fillText('1', x0, y1 + 4);
+    ctx.textAlign = 'right';
+    ctx.fillText(String(r.items), x1, y1 + 4);
+    if (r.best.t !== null) {
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = P.good;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x0, Y(r.best.t)); ctx.lineTo(x1, Y(r.best.t)); ctx.stroke();
+      ctx.restore();
+    }
+    const ts = r.thresholds;
+    if (!ts.length) return;
+    ctx.beginPath();
+    ts.forEach((t, i) => { if (i) ctx.lineTo(X(i), Y(ts[i - 1])); else ctx.moveTo(X(0), Y(t)); ctx.lineTo(X(i), Y(t)); });
+    ctx.strokeStyle = P.accent;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  // The money the contract's stream would have made at each fixed threshold, with the player's average
+  // threshold (the accent) and the hindsight-best one (dashed green; it also has to meet the goal).
+  function resultProfit(canvas, r) {
+    const { ctx, w, h } = fit(canvas);
+    const x0 = 40, x1 = w - 8, y0 = 8, y1 = h - 18;
+    let lo = 0, hi = 0;
+    for (const q of r.profit) { lo = Math.min(lo, q.money); hi = Math.max(hi, q.money); }
+    if (hi - lo < 1) { hi += 0.5; lo -= 0.5; }
+    const pad = (hi - lo) * 0.06;
+    const X = (t) => x0 + t * (x1 - x0), Y = (v) => y1 - (v - lo + pad) / (hi - lo + 2 * pad) * (y1 - y0);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath(); ctx.moveTo(x0, Y(0)); ctx.lineTo(x1, Y(0)); ctx.stroke();
+    ctx.fillStyle = P.muted;
+    ctx.font = '10px ' + FONT;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(Hud.money(hi), x0 - 4, Y(hi));
+    ctx.fillText('0', x0 - 4, Y(0));
+    if (lo < -0.5) ctx.fillText(Hud.money(lo), x0 - 4, Y(lo));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(tr('threshold'), (x0 + x1) / 2, y1 + 4);
+    ctx.textAlign = 'left';
+    ctx.fillText('0', x0, y1 + 4);
+    ctx.textAlign = 'right';
+    ctx.fillText('1', x1, y1 + 4);
+    ctx.beginPath();
+    r.profit.forEach((q, i) => { if (i) ctx.lineTo(X(q.t), Y(q.money)); else ctx.moveTo(X(q.t), Y(q.money)); });
+    ctx.strokeStyle = P.text;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    if (r.best.t !== null) {
+      ctx.save();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = P.good;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(X(r.best.t), y0); ctx.lineTo(X(r.best.t), y1); ctx.stroke();
+      ctx.restore();
+    }
+    if (r.avgT !== null) {
+      ctx.strokeStyle = P.accent;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(X(r.avgT), y0); ctx.lineTo(X(r.avgT), y1); ctx.stroke();
+    }
+  }
+
+  return { resize, update, setTab, nextTab, showProfit, sparkline, resultProfit, get tab() { return tab; } };
 })();

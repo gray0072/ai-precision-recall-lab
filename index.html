@@ -15,7 +15,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <meta name="theme-color" content="#0d1b2a">
-<link rel="stylesheet" href="styles.css?v=2">
+<link rel="stylesheet" href="styles.css?v=3">
 </head>
 <body>
 
@@ -26,6 +26,9 @@
     <div class="hudLeft">
       <div class="chip" id="hudTitle"></div>
       <div class="chip" id="hudCount"></div>
+      <div class="chip" id="hudMoney" hidden></div>
+      <div class="chip goalChip" id="hudGoal" hidden></div>
+      <div class="chip" id="hudMeter" hidden></div>
     </div>
     <div class="hudRight">
       <button class="round" id="knobsBtn" aria-controls="sandboxPanel" aria-expanded="false">☰</button>
@@ -69,6 +72,12 @@
 
 <div id="tip" role="tooltip" hidden></div>
 
+<div id="coach" role="dialog" aria-live="polite" hidden>
+  <div class="coachText"></div>
+  <div class="coachRow"><button class="btn default" id="coachBtn" data-i18n>Got it</button></div>
+  <div class="coachArrow"></div>
+</div>
+
 
 <div id="overlay">
   <div class="panel" id="startPanel">
@@ -100,7 +109,8 @@
       <p data-i18n>Items ride a conveyor belt at the height of their <b>model score</b>: 0 at the bottom, 1 at the top. One line, your <b>threshold</b>, decides: everything at or above it is flagged as <b class="pos">positive</b> (spam, fever, fraud…), everything below it passes as <b class="neg">negative</b>.</p>
       <p data-i18n>At the gate each item is revealed and drops onto the pile, and the pile <b>is</b> the confusion matrix: <b>TP</b> and <b>FP</b> above the line, <b>FN</b> and <b>TN</b> below it. Precision, recall and the ROC and PR curves follow every item.</p>
       <p data-i18n>Each client pays for right answers and fines you for mistakes. Find the line that earns the most and still meets the client's goal.</p>
-      <p data-i18n>Point at a metric bar (or tap it) to see its formula with the live numbers and which cells of the matrix and which part of the pile it is made of.</p>
+      <p data-i18n>Point at a metric bar (or tap it) to see its formula with the live numbers and which cells of the matrix and which part of the pile it is made of. Tap it again for its cheat sheet card.</p>
+      <p data-i18n><b>Campaign:</b> a contract with at least one star opens the next. ★ goal met, ★★ also the profit target, ★★★ also 90 % of what the best fixed threshold would have earned on the same stream. Too many misses at the fever gate start an outbreak, and a contract whose money falls below its fee goes bankrupt: both end it early.</p>
       <p data-i18n><b>Mouse and keyboard:</b> drag the handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (with Shift by 0.05), Page Up / Page Down by 0.10. Esc or P pauses.</p>
       <p data-i18n><b>Touch:</b> put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items. The large handle on the right can be dragged directly. On phones the game goes fullscreen.</p>
     </div>
@@ -123,6 +133,65 @@
     </div>
   </div>
 
+  <div class="panel" id="confirmPanel" hidden>
+    <h1 id="confirmTitle"></h1>
+    <p class="tagline" id="confirmText"></p>
+    <div class="btnRow">
+      <button class="btn" id="confirmYes"></button>
+      <button class="btn default" id="confirmNo" data-i18n>Cancel</button>
+    </div>
+  </div>
+
+  <div class="panel wide" id="mapPanel" hidden>
+    <div class="mapTop">
+      <h1 data-i18n>Cutoff &amp; Co.</h1>
+      <div class="mapMoney"><span class="chip" id="mapBalance"></span><span class="tag" id="mapTestSave" hidden data-i18n>test save</span></div>
+    </div>
+    <p class="fine mapNote" id="mapNote"></p>
+    <div id="mapActs"></div>
+    <div class="btnRow">
+      <button class="btn" id="mapLabBtn" data-i18n>Lab</button>
+      <button class="btn" id="mapSheetBtn" data-i18n>Cheat sheet</button>
+      <button class="btn secondary" id="mapBackBtn" data-i18n>Back</button>
+    </div>
+  </div>
+
+  <div class="panel wide" id="briefingPanel" hidden>
+    <div id="briefing"></div>
+    <div class="btnRow">
+      <button class="btn big default" id="briefStartBtn" data-i18n>Start</button>
+      <button class="btn secondary" id="briefBackBtn" data-i18n>Back to the map</button>
+    </div>
+  </div>
+
+  <div class="panel wide" id="resultsPanel" hidden>
+    <div id="results"></div>
+    <p class="label" data-i18n>Difficulty</p>
+    <div class="btnRow" id="resultsDifficulty">
+      <button class="btn toggle" data-difficulty="easy" data-i18n>Easy</button>
+      <button class="btn toggle" data-difficulty="medium" data-i18n>Medium</button>
+      <button class="btn toggle" data-difficulty="hard" data-i18n>Hard</button>
+    </div>
+    <div class="btnRow">
+      <button class="btn big" id="resNextBtn" data-i18n>Next contract</button>
+      <button class="btn" id="resRetryBtn" data-i18n>Retry</button>
+      <button class="btn" id="resLabBtn" data-i18n>Lab</button>
+      <button class="btn secondary" id="resMapBtn" data-i18n>Map</button>
+    </div>
+  </div>
+
+  <div class="panel wide" id="glossaryPanel" hidden>
+    <div class="glTop">
+      <h1 data-i18n>Cheat sheet</h1>
+      <input type="search" id="glSearch" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="glGrid"></div>
+    <div id="glCard" hidden></div>
+    <div class="btnRow">
+      <button class="btn default" id="glBackBtn" data-i18n>Back</button>
+    </div>
+  </div>
+
   <div class="panel" id="placeholderPanel" hidden>
     <h1 id="placeholderTitle"></h1>
     <p class="tagline" id="placeholderText"></p>
@@ -132,9 +201,13 @@
   </div>
 </div>
 
-<script src="constants.js?v=3"></script>
-<script src="data/icons.js?v=2"></script>
-<script src="data/scenarios.js?v=1"></script>
+<script src="constants.js?v=4"></script>
+<script src="data/icons.js?v=3"></script>
+<script src="data/scenarios.js?v=2"></script>
+<script src="data/contracts.js?v=1"></script>
+<script src="data/glossary.js?v=1"></script>
+<script src="data/quiz.js?v=1"></script>
+<script src="data/coach.js?v=1"></script>
 <script src="core/utils.js?v=1"></script>
 <script src="core/rng.js?v=1"></script>
 <script src="core/events.js?v=1"></script>
@@ -145,22 +218,29 @@
 <script src="core/cursor.js?v=1"></script>
 <script src="core/icons.js?v=1"></script>
 <script src="core/update.js?v=1"></script>
-<script src="sim/state.js?v=2"></script>
+<script src="sim/state.js?v=3"></script>
 <script src="sim/model.js?v=1"></script>
-<script src="sim/stream.js?v=2"></script>
+<script src="sim/stream.js?v=3"></script>
 <script src="sim/metrics.js?v=2"></script>
-<script src="sim/contract.js?v=1"></script>
+<script src="sim/contract.js?v=2"></script>
 <script src="sim/sandbox.js?v=1"></script>
+<script src="campaign.js?v=1"></script>
 <script src="art/palette.js?v=1"></script>
 <script src="art/items.js?v=1"></script>
-<script src="render/render.js?v=1"></script>
+<script src="art/clients.js?v=1"></script>
+<script src="render/render.js?v=2"></script>
 <script src="render/belt.js?v=1"></script>
 <script src="render/pile.js?v=1"></script>
-<script src="ui/screens.js?v=2"></script>
-<script src="ui/hud.js?v=1"></script>
-<script src="ui/livepanel.js?v=1"></script>
-<script src="ui/charts.js?v=1"></script>
+<script src="ui/screens.js?v=3"></script>
+<script src="ui/hud.js?v=2"></script>
+<script src="ui/livepanel.js?v=2"></script>
+<script src="ui/charts.js?v=2"></script>
 <script src="ui/sandboxpanel.js?v=1"></script>
-<script src="game.js?v=2"></script>
+<script src="ui/coach.js?v=1"></script>
+<script src="ui/glossary.js?v=1"></script>
+<script src="ui/map.js?v=1"></script>
+<script src="ui/briefing.js?v=1"></script>
+<script src="ui/results.js?v=1"></script>
+<script src="game.js?v=3"></script>
 </body>
 </html>

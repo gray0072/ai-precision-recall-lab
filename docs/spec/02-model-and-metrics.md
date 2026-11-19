@@ -101,7 +101,7 @@ p · V_TP + (1 − p) · V_FP  ≥  p · V_FN + (1 − p) · V_TN
 ⇔  p ≥ p* = (V_TN − V_FP) / ((V_TP − V_FN) + (V_TN − V_FP))
 ```
 
-Example (C02): `V = +2 / −10 / −1 / 0` → `p* = 10 / (3 + 10) = 0.77`. This is the ghost line of 01 §5. It is correct only for calibrated scores (with Calibration, on the calibrated `p` axis; on Easy the game computes it from the true posterior of §2.3 and maps it to the raw score axis). It ignores the contract's goal (a goal may force a lower or higher threshold) and, for value-weighted items, uses the median amount; the C05 lesson is that with amounts the best threshold differs per item (with the fraud prices of 03 §2, `p* = (0.02·a + 5) / (1.02·a + 5)`: 0.34 for $10, 0.09 for $60, 0.02 for $1 000), so a single line is a compromise.
+Example (C02): `V = +3 / −10 / 0 / 0` → `p* = 10 / (3 + 10) = 0.77`. This is the ghost line of 01 §5. It is correct only for calibrated scores (with Calibration, on the calibrated `p` axis; on Easy the game computes it from the true posterior of §2.3 and maps it to the raw score axis). It ignores the contract's goal (a goal may force a lower or higher threshold) and, for value-weighted items, uses the median amount; the C05 lesson is that with amounts the best threshold differs per item (with the fraud prices of 03 §2, `p* = (0.02·a + 5) / (1.02·a + 5)`: 0.34 for $10, 0.09 for $60, 0.02 for $1 000), so a single line is a compromise.
 
 ### 5.2 The hindsight-best fixed threshold
 

@@ -8,9 +8,9 @@
 // ============================================================
 
 const State = {
-  screen: 'start',              // 'start' | 'map' | 'sandbox' | 'glossary' | … (game.js changes it)
+  screen: 'start',              // 'start' | 'map' | 'briefing' | 'contract' | 'results' | 'sandbox' | 'glossary' (game.js)
   difficulty: DIFFICULTY_DEFAULT,
-  // The run in progress (sim/sandbox.js builds it, I04 adds contracts):
+  // The run in progress (sim/sandbox.js or sim/contract.js builds it):
   //   { kind, scenario, model, platt, key ('s' raw | 'p' calibrated), val (validation set), curves,
   //     source () → the next item or null, next (the item waiting to arrive), clock (s of run time),
   //     travelS (s from entry to the gate), window (pile size), totals (counts of the decisions made),
@@ -21,6 +21,7 @@ const State = {
   pileVersion: 0,               // bumped whenever the pile's contents change (the renderer caches its layout)
   threshold: 0.5,               // the player's threshold t, 0.00–1.00 in steps of 0.01
   paused: false,                // the pause dialog is open (01 §12): the belt, the stream and the timers stop
+  held: false,                  // a coach mark is waiting for the player (01 §13): the stream stops, the line still moves
   highlight: null,              // the live panel points at a metric: { id, num: ['TP'], den: ['TP', 'FP'] }
   review: null                  // the review band and queue, once unlocked (I05)
 };

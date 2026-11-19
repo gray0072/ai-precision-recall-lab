@@ -55,3 +55,4 @@ Rules:
 | [S02](sessions/2026-11-19_S02_skeleton.md) | 2026-11-19 | I01 | Skeleton: tools, core, start screen, PWA, test loader |
 | [S03](sessions/2026-11-19_S03_simulation-core.md) | 2026-11-19 | I02 | Simulation core: score model, streams, metrics, curves, best thresholds, tests |
 | [S04](sessions/2026-11-19_S04_play-screen-sandbox.md) | 2026-11-19 | I03 | Play screen and sandbox: belt, threshold, pile, live panel, charts |
+| [S05](sessions/2026-11-19_S05_campaign-act1.md) | 2026-11-19 | I04 | Campaign Act 1 and the cheat sheet: map, briefing, contracts, results, coach marks, balance check |

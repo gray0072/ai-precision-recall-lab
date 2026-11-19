@@ -54,6 +54,10 @@ const STAR3_SHARE = 0.9;       // share of the hindsight-best profit for ★★�
 const TOPK_DOCS = 30;          // documents per query (02 §7)
 const DEMO_SWEEP_S = 20;       // attract demo: seconds per full threshold sweep
 
+// ---------- Contracts and the campaign (spec 01 §3–§4, §14) ----------
+const GOAL_CLOSE = 0.05;       // the goal chip is amber while the value is below the target by less than this
+const CHEAT_MONEY = 1000;      // $ the debug cheat M adds
+
 // ---------- Payment amounts and fraud prices (spec 02 §2.4, 03 §2) ----------
 // ln(amount) ~ N(AMOUNT_LOG_MEAN, AMOUNT_LOG_SD) for genuine payments, + AMOUNT_FRAUD_SHIFT for fraud;
 // whole dollars, clamped to AMOUNT_MIN … AMOUNT_MAX. The median genuine payment is e^AMOUNT_LOG_MEAN = $60.

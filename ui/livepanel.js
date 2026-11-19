@@ -7,7 +7,9 @@
 // "—" for an empty denominator, 02 §3.2) and the explanations: pointing at a bar (hover, or a tap / click
 // that pins it) highlights the matrix cells and the pile regions it is made of — numerator bright, the rest
 // of the denominator outlined — and shows its formula filled with the live numbers. Formula view (sandbox)
-// shows the filled formula under every bar all the time. Every number here can be traced to the pile.
+// shows the filled formula under every bar all the time. In a contract the goal's bar carries a tick at the
+// target and turns red while the window is below it; a second tap / click on a pinned bar opens its cheat sheet
+// card (onCard, set by game.js). Every number here can be traced to the pile.
 // Reads State, sets State.highlight; updated by game.js each frame (it redraws only when something changed).
 // ============================================================
 
@@ -61,18 +63,18 @@ const LivePanel = (() => {
     row.className = 'bar';
     row.dataset.metric = m.id;
     row.tabIndex = -1;
-    row.innerHTML = '<span class="bName"></span><span class="bTrack"><span class="bFill"></span></span>' +
+    row.innerHTML = '<span class="bName"></span><span class="bTrack"><span class="bFill"></span><span class="bTick" hidden></span></span>' +
       '<span class="bVal num"></span><div class="bFormula"></div>';
     row.querySelector('.bName').textContent = m.name;   // metric names stay English in every language (04 §8)
     barsBox.appendChild(row);
     rows[m.id] = {
-      row, fill: row.querySelector('.bFill'), val: row.querySelector('.bVal'), formula: row.querySelector('.bFormula')
+      row, fill: row.querySelector('.bFill'), tick: row.querySelector('.bTick'), val: row.querySelector('.bVal'), formula: row.querySelector('.bFormula')
     };
     row.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse' && !pinned) point(m.id); });
     row.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !pinned) point(null); });
     row.addEventListener('click', () => {
-      // a second click / tap on the same bar lets go (from I04 it opens the metric's cheat sheet card)
-      if (pinned === m.id) { pinned = null; point(null); return; }
+      // a second click / tap on the same bar lets go of it and opens the metric's cheat sheet card
+      if (pinned === m.id) { pinned = null; point(null); api.onCard(m.id); return; }
       pinned = m.id;
       point(m.id);
     });
@@ -148,7 +150,8 @@ const LivePanel = (() => {
   function update(force) {
     const run = State.run;
     if (!run) return;
-    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + run.count + '|' + !!(run.knobs && run.knobs.formulas);
+    const goal = run.kind === 'contract' && run.goal ? run.goal : null;
+    const k = State.threshold + '|' + State.pileVersion + '|' + run.key + '|' + run.count + '|' + !!(run.knobs && run.knobs.formulas) + '|' + (goal ? goal.metric : '');
     if (k === key && !force) return;
     key = k;
     const c = Metrics.counts(State.pile, State.threshold, run.key);
@@ -168,6 +171,14 @@ const LivePanel = (() => {
       r.fill.style.width = v === null ? '0%' : (v * 100).toFixed(1) + '%';
       r.val.textContent = fmt(v);
       r.row.title = v === null ? m.empty() : '';
+      const target = goal && goal.metric === m.id ? run.goalTarget : null;
+      r.tick.hidden = target === null;
+      if (target !== null) {
+        r.tick.style.left = (target * 100).toFixed(1) + '%';
+        r.tick.title = tr('Target {v}', { v: target.toFixed(2) });
+      }
+      r.row.classList.toggle('goal', target !== null);
+      r.row.classList.toggle('broken', target !== null && v !== null && v < target - 1e-12);
       if (formulas) r.formula.innerHTML = formulaHtml(m, c) + ' = ' + fmt(v);
     }
     if (pointed) fillTip();
@@ -175,5 +186,6 @@ const LivePanel = (() => {
 
   function reset() { pinned = null; point(null); key = ''; }
 
-  return { update, reset, point, METRICS };
+  const api = { update, reset, point, METRICS, onCard: () => {} };
+  return api;
 })();

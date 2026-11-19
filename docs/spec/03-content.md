@@ -1,6 +1,6 @@
 # 03 — Content
 
-Content tables. In code each table is a file in `data/` (05 §2) with plain declarations; ids are stable. Money and targets are **starting values**: `tools/balance-check.js` (05 §7) tunes them in I04–I06 so that ★★ needs a sensible threshold and ★★★ a good one on Medium. All texts below are the English source; the translations live in `data/lang-ru.js` / `data/lang-sv.js` (04 §8).
+Content tables. In code each table is a file in `data/` (05 §2) with plain declarations; ids are stable. Money and targets are tuned by `tools/balance-check.js` (05 §7; Act 1 in I04, the rest in I05–I06): ★★★ must be reachable on at least 90 % of the streams on every level (the hindsight-best meets the goal and the ★★ target), so the ★★ target sits near the 10th percentile of the hindsight-best profit on Hard; and t = 0.5 must not win ★★★ on C02, C03 and C05. All texts below are the English source; the translations live in `data/lang-ru.js` / `data/lang-sv.js` (04 §8).
 
 ## 1. Scenarios
 
@@ -23,11 +23,13 @@ Prices are per item outcome: `TP / FP / FN / TN`. Fraud prices: TP $0 (prevented
 
 | Id | Name | Scenario | Teaches | `π` | `d'` | Items | Rate | Prices | Goal | Special | Fee | ★★ target |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| C01 | First day | spam | the confusion matrix (tutorial) | 0.25 | 2.4 | 100 | 0.8 | +2 / −4 / −1 / 0 | — | coach marks (01 §13) | $100 | $30 |
-| C02 | Never lose an invoice | spam | precision | 0.25 | 2.2 | 240 | 1.2 | +2 / −10 / −1 / 0 | Precision ≥ 0.90 | | $200 | $40 |
-| C03 | Fever gate | fever | recall | 0.06 | 2.0 | 300 | 1.2 | +5 / −1 / −30 / 0 | Recall ≥ 0.85 | outbreak meter, allowance 4 FN | $250 | $20 |
-| C04 | Bolt inspector | bolts | F1 and the trade-off | 0.12 | 2.4 | 250 | 1.4 | +3 / −3 / −3 / 0 | F1 ≥ 0.65 | | $250 | $50 |
-| C05 | Big money | fraud | cost-sensitive thresholds, amounts | 0.03 | 2.2 | 300 | 1.5 | fraud prices | — | amounts on items | $300 | $250 |
+| C01 | First day | spam | the confusion matrix (tutorial) | 0.25 | 2.4 | 100 | 0.8 | +3 / −4 / −1 / 0 | — | coach marks (01 §13) | $100 | $15 |
+| C02 | Never lose an invoice | spam | precision | 0.25 | 2.2 | 300 | 1.2 | +3 / −10 / 0 / 0 | Precision ≥ 0.90 | | $200 | $30 |
+| C03 | Fever gate | fever | recall | 0.06 | 2.0 | 300 | 1.2 | +12 / −1 / −30 / 0 | Recall ≥ 0.85 | outbreak meter, allowance 4 FN | $250 | $35 |
+| C04 | Bolt inspector | bolts | F1 and the trade-off | 0.12 | 2.4 | 300 | 1.4 | +4 / −3 / −3 / 0 | F1 ≥ 0.60 | | $250 | $20 |
+| C05 | Big money | fraud | cost-sensitive thresholds, amounts | 0.03 | 2.2 | 400 | 1.5 | fraud prices | — | amounts on items | $300 | $75 |
+
+Act 1 as tuned in I04 (the starting values were +2 / −4 / −1 / 0, ★★ $30; 240 items, +2 / −10 / −1 / 0, $40; +5 / −1 / −30 / 0, $20; 250 items, +3 / −3 / −3 / 0, F1 ≥ 0.65, $50; 300 items, $250): on 100–300 items the hindsight-best profit varies a lot from stream to stream, and with the old prices it was often negative on Hard. C02 now prices a missed spam at $0 ("a bit of spam in the inbox they can live with"), which keeps its p* at 10 / 13 = 0.77; C03 pays more for a caught fever, so recall ≥ 0.85 can also earn money; C04 and C05 got longer streams (less luck) and C04 a softer goal (on Hard F1 ≥ 0.67 was out of reach on a quarter of the streams). `node tools/balance-check.js` prints the table per level.
 
 ### Act 2 — The real world
 

@@ -61,7 +61,8 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── belt.js             score axis, belt, items, gate, threshold line, review band, ghost line
 │   └── pile.js             the mirrored histogram and its four regions
 ├── ui/
-│   ├── screens.js          start, map, pause, end card; overlay show / hide, focus moving
+│   ├── screens.js          start, pause, the confirmation dialog, end card; overlay show / hide, focus moving
+│   ├── map.js              the campaign map: acts, contract cards with stars and locks, the balance
 │   ├── briefing.js         the briefing panel and the quick question
 │   ├── hud.js              HUD chips and meters, incident banners
 │   ├── livepanel.js        confusion matrix, metric bars, hover explanations
@@ -81,6 +82,8 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── model.test.js       d', the posterior, AUC = Φ(d'/√2), Platt scaling, calibration keeps the ranking
 │   ├── metrics.test.js     every metric, empty denominators, ROC = Mann–Whitney, AP = scikit-learn, profit curve
 │   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
+│   ├── campaign.test.js    the data tables, the live contract run (gate money, goal chip, outbreak, cheat F, results,
+│   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save)
 │   ├── incidents.test.js
 │   └── topk.test.js
 ├── tools/
@@ -112,7 +115,7 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 ## 4. State and events
 
 - **Shared state** lives in `sim/state.js` as plain globals (`State.run`, `State.belt`, `State.pile`, `State.threshold`, `State.review`, `State.difficulty`, `State.screen`); other files read and change it there.
-- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}`, `incidentWarning {kind, inS}`, `incidentStarted`, `driftAlert {psi}`, `outbreak`, `deskFull`, `retrainDone`, `contractEnded {result}`, `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
+- **The logic never draws, plays sounds or shows messages.** It emits named events through `GameEvents` (`core/events.js`): `itemArrived {item}`, `itemDecided {item, outcome, money}`, `pileGenerated {count}`, `goalChanged {state}` (`grace` / `met` / `close` / `broken`), `incidentWarning {kind, inS}`, `incidentStarted`, `driftAlert {psi}`, `outbreak`, `deskFull`, `retrainDone`, `contractEnded {failed}` (null, `outbreak` or `bankrupt`), `purchase {upgrade}`. `ui/sounds.js` turns them into sounds; `ui/hud.js` and `game.js` into banners and screens. With nothing subscribed the logic runs silent and headless (tests, `tools/balance-check.js`).
 - **The main loop stays thin:** each frame (`requestAnimationFrame`, limited to 60 fps) `game.js` reads the input into the threshold(s), calls `Stream.update(dt)`, `Review.update(dt)`, `Incidents.update(dt)`, `Contract.update()` in this order, then `Render.frame()` and, when dirty, the live panel and the charts.
 - **Determinism:** all randomness comes from `core/rng.js` streams seeded per attempt (02 §2.2); `Math.random` is not used in `sim/`.
 
@@ -125,7 +128,7 @@ Every key starts with `prLab.` (the Pages origin `gray0072.github.io` is shared 
 | `prLab.lang` | `en` / `ru` / `sv` |
 | `prLab.sound` | `on` / `off` |
 | `prLab.difficulty` | `easy` / `medium` / `hard` |
-| `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], cheated }` |
+| `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], opened: [ids], cheated }` (`best` = the best contract money on that level, `quiz` = bonuses paid, `opened` = contracts opened by the map cheats); checked field by field on load (`Campaign.sanitize`) |
 | `prLab.sandbox.v1` | the sandbox's knobs: `{ scenario, prevalence, dPrime, calibrated, showClass, speed, prices: { TP, FP, FN, TN }, formulas, threshold }`, checked field by field on load (`Sandbox.sanitize`) |
 
 A new save format gets a new key suffix (`.v2`) and a migration from the old one.

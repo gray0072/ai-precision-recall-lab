@@ -6,7 +6,8 @@
 // edge), the mapping between a score and a height, hit-testing for drags, the animation clock of the reveals
 // and the frame: render/belt.js and render/pile.js draw the parts. The screen layouts (desktop, phone
 // landscape, phone portrait, 04 §4.2) are chosen here and applied as a class on #play; styles.css does the rest.
-// Reads State; never changes it. Used by game.js (resize, frame) and core/input.js through game.js (hit-testing).
+// Reads State; never changes it. Used by game.js (resize, frame), core/input.js through game.js (hit-testing)
+// and ui/coach.js (where an item or the handle is on the page).
 // ============================================================
 
 const Render = (() => {
@@ -108,5 +109,19 @@ const Render = (() => {
     slider.setAttribute('aria-valuetext', (State.run && State.run.key === 'p' ? 'p ≥ ' : 't = ') + t.toFixed(2));
   }
 
-  return { G, ctx, layoutName, resize, yOf, valueAt, onHandle, onPlayArea, span, reducedMotion, sinceGate, frame, get time() { return time; } };
+  // where things are on the page (CSS px, for the coach marks): an item riding the belt, the threshold's handle
+  function pagePoint(x, y) {
+    const r = canvas.getBoundingClientRect();
+    return { x: r.left + x, y: r.top + y };
+  }
+  function itemPoint(item) {
+    const p = clamp(Stream.progress(item), 0, 1);
+    return pagePoint(G.beltX0 + p * (G.gateX - G.beltX0), yOf(item[State.run.key]));
+  }
+  function handlePoint() { return pagePoint(G.handleX + (G.W - G.handleX) / 2, yOf(State.threshold)); }
+
+  return {
+    G, ctx, layoutName, resize, yOf, valueAt, onHandle, onPlayArea, span, reducedMotion, sinceGate, frame,
+    itemPoint, handlePoint, get time() { return time; }
+  };
 })();

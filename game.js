@@ -1,47 +1,50 @@
 'use strict';
 
 // ============================================================
-// AI Precision Recall Lab — the main flow (spec 05 §4): wires the buttons and keys to the screens and runs
-// the play screen. Each frame (limited to MAX_FPS) it moves the run (Stream.update, scaled by the sandbox's
-// speed, unless the belt is paused), draws the canvas (Render.frame) and lets the HUD, the live panel and the
-// charts redraw what changed. The sandbox (01 §7) is the play screen of I03; the campaign's screens are still
-// placeholders (I04). Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left.
-// Loaded last.
+// AI Precision Recall Lab — the main flow (spec 05 §4): wires the buttons and keys to the screens (start, map,
+// briefing, contract, results, sandbox, cheat sheet, pause, the New campaign confirmation) and runs the play
+// screen. Each frame (limited to MAX_FPS) it moves the run (Stream.update: in the sandbox scaled by its speed
+// unless the belt is paused; in a contract unless a coach mark holds it), checks the contract's end
+// (Contract.update), draws the canvas (Render.frame) and lets the HUD, the live panel and the charts redraw
+// what changed. Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left. The debug
+// cheats of 01 §14 are here too. Loaded last.
 // ============================================================
 
 const Game = (() => {
   const $ = (id) => document.getElementById(id);
-
-  // the screens that exist only as placeholders in this version: title and text
-  const PLACEHOLDERS = {
-    map: () => [tr('Campaign'), tr('The campaign is not built yet: twelve client contracts arrive in a later version.')],
-    glossary: () => [tr('Cheat sheet'), tr('The cheat sheet is not built yet: it arrives together with the campaign.')]
-  };
-  let placeholderBack = 'start';   // where Back on a placeholder leads: 'start' or 'pause'
   const CHART_MIN_PX = 200;        // the narrowest a chart may be in the desktop's row of three
+  const END_DELAY_MS = 900;        // the last reveal plays before the results open
+  let contractId = null;           // the contract being briefed, played or shown in the results
+  let quizRight = false;           // its briefing's question was answered right
+  let endAt = 0;                   // when the ended contract's results open (performance.now ms)
+
+  const playing = () => State.screen === 'sandbox' || State.screen === 'contract';
 
   function showPlay(on) {
     $('play').hidden = !on;
-    if (!on) { SandboxPanel.setOpen(false); LivePanel.reset(); $('tip').hidden = true; }
+    if (!on) { SandboxPanel.setOpen(false); LivePanel.reset(); $('tip').hidden = true; Coach.stop(); }
+  }
+
+  function leavePlay() {
+    showPlay(false);
+    State.run = null;
+    State.paused = false;
+    State.held = false;
   }
 
   function go(screen) {
     State.screen = screen;
     State.paused = false;
     if (screen === 'sandbox') { enterSandbox(); return; }
-    showPlay(false);
-    State.run = null;
-    if (screen === 'start') { Screens.showStart(); return; }
-    const [title, text] = PLACEHOLDERS[screen]();
-    placeholderBack = 'start';
-    Screens.showPlaceholder(title, text);
+    leavePlay();
+    if (screen === 'start') Screens.showStart();
+    else if (screen === 'map') MapScreen.show(briefing);
   }
 
   // a button that starts something: fullscreen on touch devices and the audio context need a user gesture
-  function startLike(screen) {
+  function gesture() {
     Input.enterFullscreen();
     GameAudio.ensure();
-    go(screen);
   }
 
   function setDifficulty(key) {
@@ -49,6 +52,7 @@ const Game = (() => {
     State.difficulty = key;
     Store.set('difficulty', key);
     Screens.renderStart();
+    Screens.renderDifficulty('#resultsDifficulty');
   }
 
   function setSound(on) {
@@ -56,6 +60,71 @@ const Game = (() => {
     if (GameAudio.on) GameAudio.ensure();
     Screens.renderStart();
     Screens.renderSound('#pauseSoundRow');
+  }
+
+  function labSoon() { Screens.banner(tr('The Lab opens soon: model upgrades arrive in a later version.')); }
+
+  // ---------- the campaign: New campaign, the briefing, a contract, its results ----------
+  function newCampaign() {
+    gesture();
+    if (!Campaign.exists) { Campaign.reset(); go('map'); return; }
+    Screens.confirm(tr('New campaign?'), tr('This erases the campaign: money, stars and bests. The settings stay.'),
+      tr('Erase and start'), () => { Campaign.reset(); go('map'); }, () => go('start'));
+  }
+
+  function briefing(id) {
+    contractId = id;
+    leavePlay();
+    State.screen = 'briefing';
+    Briefing.show(id, State.difficulty, { start: (right) => startContract(id, right), back: () => go('map') });
+  }
+
+  function startContract(id, right) {
+    gesture();
+    contractId = id;
+    quizRight = right;
+    State.screen = 'contract';
+    State.paused = false;
+    State.held = false;
+    endAt = 0;
+    const run = Contract.start(CONTRACTS[id], { difficulty: State.difficulty, seed: Rng.freshSeed() });
+    State.threshold = 0.5;
+    Screens.hide();
+    showPlay(true);
+    Hud.reset();
+    LivePanel.reset();
+    Charts.showProfit(DIFFICULTIES[State.difficulty].profitCurve);
+    lastLayout = null;
+    applyLayout();
+    Coach.start(run);
+  }
+
+  function endContract() {
+    const r = Contract.results(State.run);
+    const paid = Campaign.finish(r, quizRight);
+    leavePlay();
+    State.screen = 'results';
+    Results.show(r, paid, {
+      next: (id) => briefing(id),
+      retry: () => briefing(contractId),
+      lab: labSoon,
+      map: () => go('map'),
+      card: (card) => Glossary.show({ card }, () => { State.screen = 'results'; Screens.show('results'); })
+    });
+  }
+
+  // ---------- the cheat sheet ----------
+  function openGlossary(opts, back) {
+    if (!playing()) State.screen = 'glossary';
+    Glossary.show(opts, back);
+  }
+  // from play (a second tap on a metric bar): the game pauses under the card; Back plays on
+  function cardFromPlay(metric) {
+    const card = Glossary.cardOfMetric(metric);
+    if (!card || !playing()) return;
+    State.paused = true;
+    $('tip').hidden = true;
+    Glossary.show({ card }, resume);
   }
 
   // ---------- the sandbox ----------
@@ -75,6 +144,7 @@ const Game = (() => {
     showPlay(true);
     Hud.reset();
     LivePanel.reset();
+    Charts.showProfit(true);
     SandboxPanel.show(knobChanged);
     lastLayout = null;
     SandboxPanel.setOpen(Render.layoutName() === 'desktop');
@@ -91,19 +161,22 @@ const Game = (() => {
   // ---------- layout: the class on #play picks the grid (styles.css); then the canvases take their sizes ----------
   let lastLayout = null;
   function applyLayout() {
-    if (State.screen !== 'sandbox') return;
+    if (!playing() || !State.run) return;
     const name = Render.layoutName();
     const play = $('play');
+    const sandbox = State.run.kind === 'sandbox';
     // turning a tablet or resizing into a phone layout makes the docked knobs a drawer: close it
-    if (lastLayout === 'desktop' && name !== 'desktop' && SandboxPanel.isOpen()) { lastLayout = name; SandboxPanel.setOpen(false); return; }
+    if (sandbox && lastLayout === 'desktop' && name !== 'desktop' && SandboxPanel.isOpen()) { lastLayout = name; SandboxPanel.setOpen(false); return; }
     lastLayout = name;
     play.classList.remove('desktop', 'landscape', 'portrait');
     play.classList.add(name);
-    play.classList.toggle('docked', name === 'desktop' && SandboxPanel.isOpen());
+    play.classList.toggle('docked', sandbox && name === 'desktop' && SandboxPanel.isOpen());
+    play.classList.toggle('contract', !sandbox);
     // the charts sit in one row when each gets at least CHART_MIN_PX, otherwise one at a time under tabs
     play.classList.remove('tabbed');
+    const count = document.querySelectorAll('#chartsBox .chart:not([hidden])').length;
     const room = $('live').clientWidth - $('matrixBox').offsetWidth - $('barsBox').offsetWidth - 40;
-    play.classList.toggle('tabbed', name !== 'desktop' || room / 3 < CHART_MIN_PX);
+    play.classList.toggle('tabbed', name !== 'desktop' || room / count < CHART_MIN_PX);
     $('liveSwap').textContent = $('live').classList.contains('showCharts') ? tr('Numbers') : tr('Charts');
     Render.resize();
     Charts.setTab(Charts.tab);
@@ -120,7 +193,7 @@ const Game = (() => {
 
   // ---------- pause (01 §12) ----------
   function pause() {
-    if (State.screen !== 'sandbox' || State.paused) return;
+    if (!playing() || State.paused || !State.run) return;
     State.paused = true;
     saveSandbox();
     $('tip').hidden = true;
@@ -130,6 +203,51 @@ const Game = (() => {
     State.paused = false;
     Screens.hide();
     LivePanel.update(true);
+  }
+  function restart() {
+    if (State.run && State.run.kind === 'contract') { startContract(contractId, quizRight); return; }
+    Sandbox.clear();
+    resume();
+  }
+  function quit() {
+    if (State.run && State.run.kind === 'contract') { go('map'); return; }   // the contract is lost, no money
+    saveSandbox();
+    go('start');
+  }
+
+  // ---------- debug cheats (01 §14): keyboard only, never in the help; a banner says what each did ----------
+  const MAP_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
+  function cheat(e) {
+    const run = State.run;
+    const inContract = State.screen === 'contract' && run && !State.paused && !run.ended;
+    const onMap = State.screen === 'map' && Screens.shown === 'map';
+    if (onMap && MAP_KEYS.includes(e.code)) {
+      const id = CONTRACT_ORDER[MAP_KEYS.indexOf(e.code)];
+      if (CONTRACTS[id].soon) { Screens.banner(tr('Cheat: {id} arrives in a later version.', { id })); return true; }
+      Campaign.open(id);
+      Screens.banner(tr('Cheat: {id} opened.', { id }));
+      MapScreen.show(briefing);
+      return true;
+    }
+    if (!onMap && !inContract) return false;
+    if (e.code === 'KeyM') {
+      Campaign.addMoney(CHEAT_MONEY);
+      if (inContract) run.cheated = true;
+      Screens.banner(tr('Cheat: +{m}. This is a test save now.', { m: '$' + CHEAT_MONEY }));
+      if (onMap) MapScreen.show(briefing);
+      return true;
+    }
+    if (e.code === 'KeyU') { Screens.banner(tr('Cheat: there are no upgrades to buy yet (the Lab opens in a later version).')); return true; }
+    if (!inContract) return false;
+    if (e.code === 'KeyR') {
+      run.tint = !run.tint;
+      run.cheated = true;
+      Screens.banner(run.tint ? tr('Cheat: the true class shows on the belt. This run does not count.') : tr('Cheat: the true class is hidden again.'));
+      return true;
+    }
+    if (e.code === 'KeyF') { Contract.finishNow(run); Screens.banner(tr('Cheat: contract finished now. This run does not count.')); return true; }
+    if (e.code === 'KeyI') { Screens.banner(tr('Cheat: this contract has no incidents.')); return true; }
+    return false;
   }
 
   // ---------- the frame ----------
@@ -141,9 +259,17 @@ const Game = (() => {
     const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
     last = now;
     const run = State.run;
-    if (State.screen !== 'sandbox' || !run) return;
+    if (!playing() || !run) return;
     if (!State.paused) {
-      if (!run.frozen) Stream.update(dt * run.knobs.speed);
+      if (run.kind === 'sandbox') { if (!run.frozen) Stream.update(dt * run.knobs.speed); }
+      else {
+        if (!State.held) Stream.update(dt);
+        Coach.update();
+        if (Contract.update()) {
+          if (!endAt) endAt = now + END_DELAY_MS;
+          else if (now >= endAt) { endContract(); return; }
+        }
+      }
       Render.frame(dt);
     }
     Hud.update();
@@ -156,30 +282,34 @@ const Game = (() => {
     I18N.set('en');   // English only until I07
     const d = Store.get('difficulty', DIFFICULTY_DEFAULT);
     State.difficulty = DIFFICULTIES[d] ? d : DIFFICULTY_DEFAULT;
-
-    $('continueBtn').addEventListener('click', () => startLike('map'));
-    $('newCampaignBtn').addEventListener('click', () => startLike('map'));
-    $('sandboxBtn').addEventListener('click', () => startLike('sandbox'));
-    $('cheatSheetBtn').addEventListener('click', () => go('glossary'));
-    $('backBtn').addEventListener('click', () => {
-      if (placeholderBack === 'pause') Screens.showPause();
-      else go('start');
+    Campaign.init({
+      load: () => Store.getJSON('campaign.v1', null),
+      save: (data) => Store.setJSON('campaign.v1', data),
+      remove: () => Store.remove('campaign.v1')
     });
+
+    // the start screen
+    $('continueBtn').addEventListener('click', () => { gesture(); go('map'); });
+    $('newCampaignBtn').addEventListener('click', newCampaign);
+    $('sandboxBtn').addEventListener('click', () => { gesture(); go('sandbox'); });
+    $('cheatSheetBtn').addEventListener('click', () => openGlossary(null, () => go('start')));
+    $('backBtn').addEventListener('click', () => go('start'));
     $('helpToggle').addEventListener('click', Screens.toggleHelp);
-    document.querySelectorAll('#difficultyRow [data-difficulty]').forEach((b) =>
+    document.querySelectorAll('#difficultyRow [data-difficulty], #resultsDifficulty [data-difficulty]').forEach((b) =>
       b.addEventListener('click', () => setDifficulty(b.dataset.difficulty)));
     document.querySelectorAll('#soundRow [data-sound], #pauseSoundRow [data-sound]').forEach((b) =>
       b.addEventListener('click', () => setSound(b.dataset.sound === 'on')));
 
+    // the map
+    $('mapLabBtn').addEventListener('click', labSoon);
+    $('mapSheetBtn').addEventListener('click', () => openGlossary(null, () => go('map')));
+    $('mapBackBtn').addEventListener('click', () => go('start'));
+
     // the pause dialog
     $('resumeBtn').addEventListener('click', resume);
-    $('restartBtn').addEventListener('click', () => { Sandbox.clear(); resume(); });
-    $('pauseSheetBtn').addEventListener('click', () => {
-      const [title, text] = PLACEHOLDERS.glossary();
-      placeholderBack = 'pause';
-      Screens.showPlaceholder(title, text);
-    });
-    $('quitBtn').addEventListener('click', () => { saveSandbox(); go('start'); });
+    $('restartBtn').addEventListener('click', restart);
+    $('pauseSheetBtn').addEventListener('click', () => Glossary.show(null, () => Screens.showPause()));
+    $('quitBtn').addEventListener('click', quit);
 
     // the play screen
     Hud.init({
@@ -187,13 +317,14 @@ const Game = (() => {
       sound: () => setSound(!GameAudio.on),
       pause
     });
+    LivePanel.onCard = cardFromPlay;
     $('liveSwap').addEventListener('click', (e) => {
       $('live').classList.toggle('showCharts');
       e.currentTarget.blur();
       applyLayout();
     });
     Input.bindPlay($('beltCanvas'), {
-      active: () => State.screen === 'sandbox' && !State.paused && !!State.run,
+      active: () => playing() && !State.paused && !!State.run,
       threshold: () => State.threshold,
       setThreshold: (t) => { State.threshold = t; },
       onHandle: Render.onHandle,
@@ -205,13 +336,19 @@ const Game = (() => {
       nextChart: () => { Charts.nextTab(); Charts.update(true); }
     });
 
-    // Esc / P close the pause dialog; Esc on a placeholder goes back
+    // Esc closes or goes back from the panels; the cheats
     window.addEventListener('keydown', (e) => {
       if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;   // the Esc that just paused
-      const panel = Screens.visiblePanel();
+      const tag = e.target && e.target.tagName;
+      if (tag === 'INPUT' && e.key !== 'Escape') return;
+      if (cheat(e)) { e.preventDefault(); return; }
+      const panel = Screens.shown;
       const esc = e.key === 'Escape';
-      if (panel === $('pausePanel') && (esc || e.code === 'KeyP')) { e.preventDefault(); resume(); return; }
-      if (panel === $('placeholderPanel') && esc) { e.preventDefault(); $('backBtn').click(); }
+      if (panel === 'pause' && (esc || e.code === 'KeyP')) { e.preventDefault(); resume(); return; }
+      if (!esc) return;
+      const backs = { placeholder: 'backBtn', confirm: 'confirmNo', map: 'mapBackBtn', briefing: 'briefBackBtn', results: 'resMapBtn' };
+      if (panel === 'glossary') { e.preventDefault(); Glossary.goBack(); }
+      else if (backs[panel]) { e.preventDefault(); $(backs[panel]).click(); }
     });
     // leaving the tab or switching apps pauses (on phones the first tap after returning restores fullscreen)
     document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -228,5 +365,5 @@ const Game = (() => {
   }
 
   boot();
-  return { go, pause, resume, applyLayout };
+  return { go, pause, resume, applyLayout, briefing, startContract };
 })();

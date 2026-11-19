@@ -85,13 +85,13 @@ The results screen shows:
 ## 4. Money and stars
 
 - Money per item = the price of its outcome (TP / FP / FN / TN), or for value-weighted contracts (fraud) a function of the item's amount (03 §2). Review desk items cost the review fee instead (§5).
-- **Fee**: on completion (not on failure) the client pays the contract's fee, plus `QUIZ_BONUS` for a right quiz answer.
+- **Fee**: on completion (not on failure) the client pays the contract's fee, plus `QUIZ_BONUS` for a right quiz answer (once per contract).
 - **Stars**, per contract and difficulty:
   - ★ — completed (not failed) **and** the goal met;
   - ★★ — also profit ≥ the contract's `target` (03 §2);
   - ★★★ — also profit ≥ `STAR3_SHARE` (90 %) of the hindsight-best profit.
   - A contract with no metric goal (C01, C05, C08, C10) gives ★ for completing it.
-- Replaying a contract pays its money again (so the Lab can always be reached), but the fee only for a better star result than before.
+- Replaying a contract pays its money again (so the Lab can always be reached), but the fee only for more stars than that level's record (the first completion on a level always pays it). A failed contract keeps its own money (usually fines) but pays no fee; quitting from the pause dialog loses the contract and its money. A run with a debug cheat pays only its own money (§14).
 
 ## 5. The Lab (upgrades)
 
@@ -193,16 +193,16 @@ C01 is guided by **coach marks**: a small bubble with an arrow pointing at the t
 5. After 40 items: "Precision: of everything you flagged, how much was really spam. Recall: of all the spam, how much you caught. Move the line and watch them pull against each other." (points at the bars)
 6. "Both live in the pile: tap a bar to see which part of it." (end)
 
-Every later contract that introduces a new element (outbreak meter C03, F1 C04, amounts C05, review band C08, drift monitor C09, top-k C11) has one or two coach marks the first time. Coach marks seen are remembered (05 §5); the pause dialog has no "replay tutorial", but replaying C01 always shows them.
+Every later contract that introduces a new element (the goal chip C02, outbreak meter C03, F1 C04, amounts C05, review band C08, drift monitor C09, top-k C11) has one or two coach marks the first time. Coach marks seen are remembered (05 §5); the pause dialog has no "replay tutorial", but replaying C01 always shows them.
 
 ## 14. Debug cheats
 
 Keyboard only, during play or on the map, never mentioned in the in-game help, each showing a short banner of what it did:
 
 - `1`–`9`, `0`, `-`, `=` on the map: open contract C01–C12 directly (unlock it).
-- `M`: +$1 000. `U`: buy every upgrade. `R` (during play): toggle showing the true class on the belt. `F` (during play): finish the contract now with the current results. `I` (during play): start the contract's next incident now.
+- `M`: +$1 000. `U`: buy every upgrade. `R` (during play): toggle showing the true class on the belt. `F` (during play): finish the contract now with the current results (the hindsight-best is then computed on the items decided so far). `I` (during play): start the contract's next incident now. Until the Lab (I05) and incidents exist, `U` and `I` only say so.
 
-Once any cheat is used in a contract run, that run is marked as cheated: it never updates stars or bests (money still counts, the cheats are for testing). `M` and `U` mark the whole campaign save as `cheated: true`, shown as a small "test save" tag on the map.
+Once any cheat is used in a contract run, that run is marked as cheated: it never updates stars or bests and pays only its own money, no fee and no quiz bonus (the cheats are for testing). `M` and `U` mark the whole campaign save as `cheated: true`, shown as a small "test save" tag on the map.
 
 ## 15. Saving, records, sound
 

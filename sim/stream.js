@@ -113,25 +113,29 @@ const Stream = (() => {
     State.pileVersion++;
   }
 
-  // The gate: the item is decided with the threshold of this moment and revealed (01 §1.3).
-  // Money comes with the contracts (I04); the sandbox has none.
+  // The gate: the item is decided with the threshold of this moment and revealed (01 §1.3). The threshold is
+  // kept on the item (the results' sparkline). A contract prices the outcome (run.moneyOf) and checks its rules
+  // right after (run.afterGate: the outbreak, bankruptcy, the goal chip, the end); the sandbox has neither.
   function gate(item) {
     const run = State.run;
     const d = decide(item, State.threshold, run.key);
     item.flagged = d.flagged;
     item.outcome = d.outcome;
+    item.t = State.threshold;
+    item.money = run.moneyOf ? run.moneyOf(item, d.outcome) : 0;
     run.totals[d.outcome]++;
     run.count++;
     toPile(item);
-    GameEvents.emit('itemDecided', { item, outcome: d.outcome, money: 0 });
+    GameEvents.emit('itemDecided', { item, outcome: d.outcome, money: item.money });
+    if (run.afterGate) run.afterGate(item);
   }
 
   // Advances the run by dt seconds of run time: arrivals enter the belt at their own arrival time (so the
   // spacing does not depend on the frame rate), and every item that has ridden travelS seconds is decided.
-  // The belt is first in, first out: every item rides the same time.
+  // The belt is first in, first out: every item rides the same time. Nothing moves once a contract has ended.
   function update(dt) {
     const run = State.run;
-    if (!run) return;
+    if (!run || run.ended) return;
     run.clock += dt;
     while (run.next && run.next.at <= run.clock) {
       const item = run.next;
@@ -140,8 +144,8 @@ const Stream = (() => {
       GameEvents.emit('itemArrived', { item });
       run.next = run.source();
     }
-    while (State.belt.length && run.clock - State.belt[0].enter >= run.travelS - 1e-9) gate(State.belt.shift());
+    while (!run.ended && State.belt.length && run.clock - State.belt[0].enter >= run.travelS - 1e-9) gate(State.belt.shift());
   }
 
-  return { generate, validation, calibrate, outcome, decide, endless, progress, timeToGate, toPile, gate, update };
+  return { generate, amount, validation, calibrate, outcome, decide, endless, progress, timeToGate, toPile, gate, update };
 })();

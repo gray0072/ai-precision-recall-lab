@@ -5,22 +5,29 @@
 // moving the focus between a panel's buttons with the arrow keys and pressing its default button with
 // Space / Enter (from fish-frenzy's core/input.js), the short banner, and the start screen (title,
 // Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, How to play), the pause
-// dialog (01 §12) and a placeholder panel for the screens that come later (map, cheat sheet).
-// Reads State and Store; game.js wires the buttons to the flow.
+// dialog (01 §12), a confirmation dialog (New campaign) and a placeholder panel for what comes later.
+// The map, the briefing, the results and the cheat sheet have files of their own and register their panels here.
+// Reads State and Campaign; game.js wires the buttons to the flow.
 // ============================================================
 
 const Screens = (() => {
   const $ = (id) => document.getElementById(id);
   const overlay = $('overlay');
-  const panels = { start: $('startPanel'), pause: $('pausePanel'), placeholder: $('placeholderPanel') };
+  const panels = {
+    start: $('startPanel'), pause: $('pausePanel'), placeholder: $('placeholderPanel'), confirm: $('confirmPanel'),
+    map: $('mapPanel'), briefing: $('briefingPanel'), results: $('resultsPanel'), glossary: $('glossaryPanel')
+  };
+  let shownName = null;
 
   function show(name) {
+    shownName = name;
     overlay.hidden = false;
     for (const key in panels) panels[key].hidden = key !== name;
     overlay.scrollTop = 0;
   }
   // also drops the focus a menu left on a button, so Space during play cannot press it
   function hide() {
+    shownName = null;
     overlay.hidden = true;
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
@@ -62,6 +69,8 @@ const Screens = (() => {
   window.addEventListener('keydown', (e) => {
     const panel = visiblePanel();
     if (!panel || e.altKey || e.ctrlKey || e.metaKey) return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;   // typing in the cheat sheet's search field
     const buttons = Array.from(panel.querySelectorAll('.btn')).filter((b) => b.offsetParent !== null);
     const focused = buttons.includes(document.activeElement) ? document.activeElement : null;
     const fallback = panel.querySelector('.btn.default:not([hidden])') || buttons[0];
@@ -87,7 +96,7 @@ const Screens = (() => {
   };
 
   function renderStart() {
-    const hasCampaign = Store.get('campaign.v1', null) !== null;
+    const hasCampaign = Campaign.exists;
     $('continueBtn').hidden = !hasCampaign;
     $('continueBtn').classList.toggle('default', hasCampaign);
     $('newCampaignBtn').classList.toggle('default', !hasCampaign);
@@ -132,6 +141,18 @@ const Screens = (() => {
     show('pause');
   }
 
+  // ---------- a yes / no question; No (the default) goes back to `back` ----------
+  let onYes = null, onNo = null;
+  function confirm(title, text, yesLabel, yes, no) {
+    $('confirmTitle').textContent = title;
+    $('confirmText').textContent = text;
+    $('confirmYes').textContent = yesLabel;
+    onYes = yes; onNo = no;
+    show('confirm');
+  }
+  $('confirmYes').addEventListener('click', () => { if (onYes) onYes(); });
+  $('confirmNo').addEventListener('click', () => { if (onNo) onNo(); });
+
   // ---------- the placeholder for screens that come in later iterations ----------
   function showPlaceholder(title, text) {
     $('placeholderTitle').textContent = title;
@@ -139,5 +160,17 @@ const Screens = (() => {
     show('placeholder');
   }
 
-  return { show, hide, visiblePanel, banner, showStart, renderStart, renderSound, toggleHelp, showPause, showPlaceholder };
+  // the difficulty toggle rows (start, results): the current one pressed
+  function renderDifficulty(row) {
+    document.querySelectorAll(row + ' [data-difficulty]').forEach((b) => {
+      const on = b.dataset.difficulty === State.difficulty;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  return {
+    show, hide, visiblePanel, banner, showStart, renderStart, renderSound, renderDifficulty, toggleHelp, showPause,
+    showPlaceholder, confirm, get shown() { return shownName; }
+  };
 })();
