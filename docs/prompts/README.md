@@ -62,3 +62,4 @@ Rules:
 | [S09](sessions/2026-11-20_S09_cloud-save.md) | 2026-11-20 | — | Cloud save: Google sign-in through Supabase, the campaign synced between devices |
 | [S10](sessions/2026-11-20_S10_polish-and-tidy.md) | 2026-11-20 | — | Polish: Lab try-on, metric tooltip on touch, double speed, the repo root tidied |
 | [S11](sessions/2026-11-20_S11_offline-pwa.md) | 2026-11-20 | — | Offline PWA: a service worker that caches the version index.html links |
+| [S12](sessions/2026-11-20_S12_lab-hover-layout.md) | 2026-11-20 | — | Lab: the model cards no longer shift when an upgrade is pointed at |

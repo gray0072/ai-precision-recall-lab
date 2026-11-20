@@ -79,10 +79,10 @@ const Lab = (() => {
       const card = cards[fam.id];
       const b = bonus(fam.id), nb = preview ? bonus(fam.id, preview) : b;
       for (const sc of fam.scenarios) {
-        const v = card.rows[sc];
-        const now = aucOf(sc, b).toFixed(2), next = aucOf(sc, nb).toFixed(2);
-        v.textContent = 'AUC ' + now + (nb !== b ? ' → ' + next : '');
-        v.classList.toggle('good', nb !== b);
+        const row = card.rows[sc];
+        row.now.textContent = 'AUC ' + aucOf(sc, b).toFixed(2);
+        row.next.textContent = row.now.textContent + ' → ' + aucOf(sc, nb).toFixed(2);
+        row.v.classList.toggle('good', nb !== b);
       }
       card.bonusEl.textContent = b ? tr("Lab bonus: d' +{b}", { b: b.toFixed(2) }) : tr('No upgrades yet');
       const base = Model.effectiveDPrime(SCENARIOS[fam.scenarios[0]].dPrime, b);
@@ -110,8 +110,13 @@ const Lab = (() => {
       for (const sc of fam.scenarios) {
         const r = el('div', 'labScen');
         r.appendChild(el('span', '', tr(SCENARIOS[sc].name)));
-        rows[sc] = el('b', 'num', '');
-        r.appendChild(rows[sc]);
+        // "AUC now" and "AUC now → next" stacked in one cell, one of them visible: the cell is always as
+        // wide as the longer one, so pointing at an upgrade never changes the card's layout
+        const v = el('b', 'num labAuc');
+        const now = el('span', 'labNow', ''), next = el('span', 'labNext', '');
+        v.append(now, next);
+        rows[sc] = { v, now, next };
+        r.appendChild(v);
         info.appendChild(r);
       }
       const bonusEl = el('p', 'fine', '');

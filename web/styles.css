@@ -783,6 +783,11 @@ canvas.resChart { width: 100%; height: 130px; display: block; }
 .labFamInfo .fine { min-height: 0; margin: 4px 0 0; }
 .labScen { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
 .labScen b { white-space: nowrap; }
+.labFamInfo .labScen { flex-wrap: wrap; column-gap: 8px; row-gap: 0; }
+.labAuc { margin-left: auto; display: inline-grid; }
+.labAuc > span { grid-area: 1 / 1; justify-self: end; }
+.labAuc .labNext, .labAuc.good .labNow { visibility: hidden; }
+.labAuc.good .labNext { visibility: visible; }
 #labUpgrades { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
 .labUpgrade { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
 .labUpgrade.bought { border-color: rgba(123, 216, 143, 0.45); }
