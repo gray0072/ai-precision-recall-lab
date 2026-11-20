@@ -71,7 +71,7 @@ Development (Node 20+): `node --test tests/*.test.js` runs the tests of the simu
 
 - Vanilla JavaScript, Canvas 2D and Web Audio; plain scripts, no framework, no bundler, no third-party code ([ADR-0001](docs/adr/0001-static-vanilla-js.md)) except the optional cloud save's vendored supabase-js ([ADR-0007](docs/adr/0007-cloud-save-supabase.md)); charts drawn by hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); every sound synthesized.
 - A deterministic simulation (`sim/`) with seeded random streams, separated from drawing and sound by an event bus; the same code runs headless in the tests and the balance check.
-- An installable PWA on GitHub Pages; a new deploy is picked up only on the start screen or the map, never mid-contract.
+- An installable PWA on GitHub Pages that works offline after the first start (a service worker caches the current version); a new deploy is picked up only on the start screen or the map, never mid-contract.
 - Built with AI coding agents, iteration by iteration: the [spec](docs/spec/00-overview.md), the [roadmap](docs/plan/roadmap.md), the [architecture decisions](docs/adr/README.md) and the [prompt history](docs/prompts/README.md) are all in `docs/`.
 
 ## License

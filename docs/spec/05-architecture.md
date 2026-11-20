@@ -44,6 +44,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   │   ├── cursor.js           hides the mouse cursor in fullscreen while it is still (from ivan)
 │   │   ├── icons.js            the Icons engine (from ivan)
 │   │   ├── update.js           picks up a new deploy, reloading only when idle (from ivan)
+│   │   ├── offline.js          registers sw.js (over http(s) only)
 │   │   └── cloud.js            the optional cloud save: Google sign-in (Supabase Auth), sync of the campaign (01 §15.1)
 │   ├── sim/                    no drawing, no DOM, no sound: changes state and emits events
 │   │   ├── state.js            shared state: screen, difficulty, the run, the belt's items, the pile window, the threshold(s)
@@ -86,6 +87,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   │   └── endcard.js          the campaign's end card: total stars, titles, Play again on Hard
 │   ├── icon.svg, icon-maskable.svg, icon-192.png, icon-512.png, icon-maskable-512.png, apple-touch-icon.png
 │   ├── manifest.webmanifest
+│   ├── sw.js                   the service worker: offline play, a cache of the version index.html links (§6, ADR-0009)
 │   └── screenshot.png          preview (English UI): the READMEs and og:image; docs/showcase.gif for the README top
 ├── supabase/
 │   └── schema.sql          the cloud save's table (prlab_progress, a row per account), run in the Supabase SQL editor
@@ -130,7 +132,7 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 
 ## 3. Load order
 
-`index.html` loads, in this order: `lib/supabase.min.js`; `constants.js`; `data/` (icons, scenarios, contracts, upgrades, glossary, quiz, coach, lang-ru, lang-sv); `core/` (utils, rng, events, i18n, storage, audio, input, cursor, icons, update, cloud); `sim/` (state, model, stream, metrics, contract, incidents, review, topk, sandbox, demo); `campaign.js`; `art/`; `render/`; `ui/`; `game.js` last. Every local `<link>` / `<script src>` carries `?v=N`, bumped whenever that file changes.
+`index.html` loads, in this order: `lib/supabase.min.js`; `constants.js`; `data/` (icons, scenarios, contracts, upgrades, glossary, quiz, coach, lang-ru, lang-sv); `core/` (utils, rng, events, i18n, storage, audio, input, cursor, icons, update, offline, cloud); `sim/` (state, model, stream, metrics, contract, incidents, review, topk, sandbox, demo); `campaign.js`; `art/`; `render/`; `ui/`; `game.js` last. Every local `<link>` / `<script src>` carries `?v=N`, bumped whenever that file changes.
 
 ## 4. State and events
 
@@ -156,12 +158,15 @@ Every key starts with `prLab.` (the Pages origin `gray0072.github.io` is shared 
 
 A new save format gets a new key suffix (`.v2`) and a migration from the old one.
 
+Cache Storage is shared with the origin too: the service worker's one cache is `prLab.offline.v1` (§6), and it deletes only caches whose name starts with `prLab.`.
+
 ## 6. PWA and updates
 
 - `manifest.webmanifest`: `name` "AI Precision Recall Lab", `short_name` "PR Lab" (≤ 12 chars), `description`, `start_url` / `scope` `"./"`, `id` `"/ai-precision-recall-lab/"` (absolute on purpose: a relative `id` resolves against the origin and would clash with every other app on `gray0072.github.io`), `display` `fullscreen`, `theme_color` / `background_color` `#0d1b2a`, icons `icon-192.png` + `icon-512.png` (`any`) and `icon-maskable-512.png` (`maskable`), all with `?v=N`.
 - Static texts in `index.html` are `[data-i18n]` elements whose English inner HTML is the key (`core/i18n.js` `applyDom`); `tools/i18n-check.js` reads them too.
 - `<head>`: the viewport meta `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`, `mobile-web-app-capable`, `apple-mobile-web-app-capable`, favicon `icon.svg?v=N`, manifest, `apple-touch-icon`, `theme-color`, a `description` and Open Graph tags (`og:url`, and `og:image` with the absolute URL of `screenshot.png`, 1600 × 900: Open Graph needs an absolute URL) and `twitter:card` `summary_large_image`.
 - `core/update.js` (`AppUpdate.watch(() => idle)`, idle = the start screen or the map): on every return to the foreground and once an hour it fetches `index.html`, compares its `?v=N` links with the running page's, and reloads at the next idle moment.
+- **Offline** ([ADR-0009](../adr/0009-offline-service-worker.md)): `sw.js`, registered by `core/offline.js` after the page has loaded (only over http(s)). Its cache `prLab.offline.v1` holds `index.html`, every file `index.html` links (`src` / `href`), the manifest's icons and `EXTRA` (files the page loads without a link in `index.html`: the language flags). `index.html` (a navigation or `update.js`'s fetch) is network-first, from the cache only offline; a fresh copy that differs from the cached one is parsed in the background, its missing files fetched, and only when all are in it replaces the cached `index.html` and the files it no longer links are deleted. Every other file of the folder is cache-first (the `?v=N` makes its URL unique), from the network on a miss. Other origins (Supabase) are not touched. A deploy needs nothing in `sw.js`; a file loaded from JS goes into `EXTRA`; an unbumped `?v=N` stays old in the cache.
 
 ## 7. Testing
 

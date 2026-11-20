@@ -453,6 +453,8 @@ const Game = (() => {
     requestAnimationFrame(tick);
     // a new deploy reloads the page only where nothing is lost: the start screen and the map
     AppUpdate.watch(() => State.screen === 'start' || State.screen === 'map');
+    // the service worker keeps the game playable without a network
+    AppOffline.register();
   }
 
   boot();

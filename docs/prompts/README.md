@@ -61,3 +61,4 @@ Rules:
 | [S08](sessions/2026-11-19_S08_release.md) | 2026-11-19 | I07 | Release: sounds, Russian and Swedish, the language switcher, READMEs, screenshot and GIF, GitHub Pages |
 | [S09](sessions/2026-11-20_S09_cloud-save.md) | 2026-11-20 | — | Cloud save: Google sign-in through Supabase, the campaign synced between devices |
 | [S10](sessions/2026-11-20_S10_polish-and-tidy.md) | 2026-11-20 | — | Polish: Lab try-on, metric tooltip on touch, double speed, the repo root tidied |
+| [S11](sessions/2026-11-20_S11_offline-pwa.md) | 2026-11-20 | — | Offline PWA: a service worker that caches the version index.html links |

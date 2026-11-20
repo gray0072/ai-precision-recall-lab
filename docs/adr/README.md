@@ -14,3 +14,4 @@ Template: [0000-template.md](0000-template.md).
 | [0006](0006-adversary-aims-at-the-hindsight.md) | Against the fraud ring, the hindsight-best threshold is aimed at too | Accepted |
 | [0007](0007-cloud-save-supabase.md) | An optional cloud save through Supabase (Google sign-in), with supabase-js vendored | Accepted |
 | [0008](0008-game-in-web-folder.md) | The game in `web/`, deployed to Pages by a workflow | Accepted |
+| [0009](0009-offline-service-worker.md) | Offline play through a self-updating service worker that reads `index.html` | Accepted |

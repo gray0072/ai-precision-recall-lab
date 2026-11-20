@@ -73,7 +73,7 @@ Utveckling (Node 20+): `node --test tests/*.test.js` kör simuleringens tester; 
 
 - Ren JavaScript, Canvas 2D och Web Audio; vanliga skript, inget ramverk, ingen bundlare, ingen tredjepartskod ([ADR-0001](docs/adr/0001-static-vanilla-js.md)) utom molnsparningens inbäddade supabase-js ([ADR-0007](docs/adr/0007-cloud-save-supabase.md)); diagrammen ritas för hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); alla ljud syntetiseras.
 - En deterministisk simulering (`sim/`) med seedade slumpströmmar, skild från ritning och ljud av en händelsebuss; samma kod körs utan webbläsare i testerna och balanskontrollen.
-- En installerbar PWA på GitHub Pages; en ny version plockas upp bara på startskärmen eller kartan, aldrig mitt i ett uppdrag.
+- En installerbar PWA på GitHub Pages som fungerar offline efter första starten (en service worker cachar den aktuella versionen); en ny version plockas upp bara på startskärmen eller kartan, aldrig mitt i ett uppdrag.
 - Byggt med AI-kodagenter, iteration för iteration: [specifikationen](docs/spec/00-overview.md), [planen](docs/plan/roadmap.md), [arkitekturbesluten](docs/adr/README.md) och [prompthistoriken](docs/prompts/README.md) finns i `docs/` (på engelska).
 
 ## Licens

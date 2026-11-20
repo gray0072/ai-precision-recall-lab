@@ -213,6 +213,7 @@ Once any cheat is used in a contract run, that run is marked as cheated: it neve
 - The campaign (money, upgrades, stars and bests per contract and level, coach marks seen, quiz answers) is saved after every contract and every purchase; the settings (language, sound, difficulty, sandbox knobs) when they change. Keys and shapes: 05 §5. Signed in with Google, the campaign also syncs through the cloud (§15.1).
 - **Sound** On / Off on the start screen and in the pause dialog, on by default, applied at once through one master gain (04 §7).
 - **Updates**: a page left open picks up a new deploy only on the start screen or the map, never during a contract, a pause or a dialog (`core/update.js`, 05 §6).
+- **Offline**: after one online start the game (above all the installed app) starts and plays without a network; only the cloud save waits for it (`sw.js`, 05 §6).
 
 ### 15.1 Cloud save
 
