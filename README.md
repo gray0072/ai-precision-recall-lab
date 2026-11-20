@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icon.svg" alt="AI Precision Recall Lab icon" width="96" height="96">
+<img src="web/icon.svg" alt="AI Precision Recall Lab icon" width="96" height="96">
 
 # AI Precision Recall Lab
 
@@ -51,19 +51,19 @@ Matrix: the model's answer in rows, the truth in columns; read the name backward
 
 - **Mouse and keyboard:** drag the threshold handle, or press anywhere on the belt or the pile and drag; the wheel moves the line by 0.01. ↑ / ↓ or W / S move it by 0.01 (Shift: 0.05), Page Up / Page Down by 0.10. In a top-k search the same keys change k. With the review desk, Q / A move the band's lower edge, and a click on an item sends it to people. Esc or P pauses. In menus the arrow keys move between buttons and Space / Enter press the highlighted one.
 - **Touch:** put a finger anywhere on the belt or the pile and slide it up or down: the line follows the movement, not the finger, so your thumb never covers the items it is judging. The large handle on the right can be dragged directly; the review band has its own violet handle on the left, and a tap on an item sends it to the review desk. On phones the game goes fullscreen (iPhone Safari stays windowed and still works).
-- **Campaign:** you run Cutoff & Co. and take contracts from clients, three acts, twelve contracts. The briefing gives the client's prices for the four outcomes, the goal (e.g. Precision ≥ 0.90 over the whole contract), the model card and a quick question with a bonus. **Stars:** ★ goal met, ★★ also the profit target, ★★★ also 90 % of what the best fixed threshold would have earned on the very same stream. Act 1 teaches the matrix, precision, recall, F1 and costs; Act 2 brings an accuracy trap, a flu season (the base rate shifts), a human review desk and a spam wave (drift, the PSI monitor, Retrain); Act 3 a fraud ring that learns your line, top-k search for an AI assistant, and the big pitch: three clients in a row, each changing its prices halfway.
-- **The Lab:** spend the money on more data and better features (the two humps move apart and the AUC grows), calibration, the drift monitor and the review desk.
+- **Campaign:** you run Cutoff & Co. and take contracts from clients, three acts, twelve contracts. The briefing gives the client's prices for the four outcomes, the goal (e.g. Precision ≥ 0.90 over the whole contract), the model card and a quick question with a bonus. **Stars:** ★ goal met, ★★ also the profit target, ★★★ also 90 % of what the best fixed threshold would have earned on the very same stream. Act 1 teaches the matrix, precision, recall, F1 and costs; Act 2 brings an accuracy trap, a flu season (the base rate shifts), a human review desk and a spam wave (drift, the PSI monitor, Retrain); Act 3 a fraud ring that learns your line, top-k search for an AI assistant, and the big pitch: three clients in a row, each changing its prices halfway. The **×2** button in the top bar runs a contract at double speed (the same items, money and stars, only faster).
+- **The Lab:** spend the money on more data and better features (the two humps move apart and the AUC grows), calibration, the drift monitor and the review desk. Tap a card (or point at it) to try the upgrade on: the AUCs it would change show on the card and on the model cards; the button buys it.
 - **Cheat sheet:** every metric on a card — the formula in the matrix's colours, a mnemonic, a pitfall, an example, a live picture of the pile — plus a "Which metric?" helper. Tap a metric bar twice during play to open its card.
 - **Sandbox:** the play screen without money or goals, with knobs for the scenario, the base rate, the separation d′, calibration, prices, a review band and top-k mode; **Generate 1 000** fills the pile at once.
 - **Difficulty** (on the start screen and in every retry dialog, remembered): **Easy** — a slower belt, a better model, a faint hint of the true class, the cost-optimal line always shown, softer goals; **Medium** — the contracts as written; **Hard** — a faster belt, a weaker model, stricter goals, no warning before incidents.
 - **Language** EN · RU · SV and **Sound** On / Off on the start screen, both remembered. Metric names stay English in every language, with the local term next to them.
 - **Cloud save** (optional): **Sign in with Google** on the start screen and the campaign — money, upgrades, stars and bests — syncs between your devices; the settings stay on each device. Without signing in everything stays in the browser.
 
-<p align="center"><img src="screenshot.png" alt="A contract in play: the belt with letters, the threshold line, the pile, the confusion matrix and the metric bars" width="800"></p>
+<p align="center"><img src="web/screenshot.png" alt="A contract in play: the belt with letters, the threshold line, the pile, the confusion matrix and the metric bars" width="800"></p>
 
 ## Run locally
 
-Open `index.html` in a browser (it works from `file://`), or serve the folder: `python -m http.server` and open http://localhost:8000/ (needed to install it as an app). No build step, no dependencies.
+Open `web/index.html` in a browser (it works from `file://`), or serve that folder: `python -m http.server` in `web/` and open http://localhost:8000/ (needed to install it as an app). No build step, no dependencies.
 
 Development (Node 20+): `node --test tests/*.test.js` runs the tests of the simulation; `node tools/balance-check.js` plays every contract headless; the other tools are listed in [AGENTS.md](AGENTS.md#commands).
 

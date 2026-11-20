@@ -54,7 +54,7 @@ All screens except the play area are panels in `#overlay` (as in `ivan`), centre
 | **Play** | §4. |
 | **Pause** | 01 §12. |
 | **Results** | 01 §3.4: stars (animated in one by one), money, goal, the final matrix and metrics table, the threshold sparkline with the hindsight-best line, the profit curve, the lesson card, buttons with the difficulty row for Retry. Failure ("Outbreak!" / "Bankrupt!") uses the same panel with a red header and no stars. |
-| **Lab** | 01 §5: the balance; a model card per family (its scenarios with their AUC, a mini binormal ROC); the upgrade cards (price, effect, why it works in real ML, Buy / Bought / Needs … first / Not enough money). Pointing at an upgrade (hover or focus) shows "AUC 0.94 → 0.95" on the families it touches, and their mini ROC morphs to the new curve over the old one, faint. |
+| **Lab** | 01 §5: the balance; a model card per family (its scenarios with their AUC, a mini binormal ROC); the upgrade cards (price, effect, why it works in real ML, Buy / Bought / Needs … first / Not enough money). Pointing at an upgrade (mouse hover or keyboard focus) or trying it on (a tap / click on its card, outlined in amber until tapped again) shows "AUC 0.94 → 0.95" on the families it touches, and their mini ROC morphs to the new curve over the old one, faint; the tried card lists the same changes itself. |
 | **Sandbox** | The play screen with the knobs panel (01 §7) instead of the HUD's contract chips: docked at the right on desktops, a drawer from the right on phones (closed at first); the HUD's ☰ button opens and closes it. |
 | **Cheat sheet** | A grid of cards (03 §4), two or three columns on desktop, one on phones; a card opens full-size with its live pile picture; a search field filters by name; the "Which metric?" flow as the first card. Opened from play, it is an overlay over the paused game with a Back button. |
 | **End card** | After a won C12, from its results ("The end"): fireworks over the panel (`ui/fireworks.js`, from `ivan`'s city-builder, in the game's orange, blue and amber; none with `prefers-reduced-motion`), "Cutoff & Co. is now a unicorn", the total stars, the titles earned (03 §2), and the buttons **Play again on Hard** (default; it sets the difficulty and opens the map; hidden when already on Hard), **Map**, **Start screen** (`ui/endcard.js`). |
@@ -144,8 +144,8 @@ The **Sound** switch (On / Off, on the start screen and in the pause dialog) is 
 
 ## 9. Icons
 
-- **Arrows, symbols and emoji are drawn, never taken from a font** (`ivan` rule): the Icons engine (`data/icons.js`, `core/icons.js`, built by `node tools/icons-build.js .`) turns every such character in the page's text into an SVG; canvas code uses `Icons.draw` / `Icons.drawText`. Characters used: ✓ ✗ ▶ ⏸ 🔊 🔇 🦠 👥 ⭐ 💰 ✦ ↑ ↓ ← →.
-- **The game icon** (`icon.svg`, 512 × 512, rounded tile `rx="112"`): on the dark navy tile, a few orange and blue dots rising in two overlapping humps, cut by one bold amber horizontal line with a handle at the right end. `icon-maskable.svg`: the same full-bleed, the art inside the central circle of radius ≈ 170; PNGs from `bash tools/pwa-icons.sh .`.
+- **Arrows, symbols and emoji are drawn, never taken from a font** (`ivan` rule): the Icons engine (`data/icons.js`, `core/icons.js`, built by `node tools/icons-build.js web`) turns every such character in the page's text into an SVG; canvas code uses `Icons.draw` / `Icons.drawText`. Characters used: ✓ ✗ ▶ ⏸ 🔊 🔇 🦠 👥 ⭐ 💰 ✦ ↑ ↓ ← →.
+- **The game icon** (`icon.svg`, 512 × 512, rounded tile `rx="112"`): on the dark navy tile, a few orange and blue dots rising in two overlapping humps, cut by one bold amber horizontal line with a handle at the right end. `icon-maskable.svg`: the same full-bleed, the art inside the central circle of radius ≈ 170; PNGs from `bash tools/pwa-icons.sh web`.
 
 ## 10. Accessibility
 

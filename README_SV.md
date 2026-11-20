@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icon.svg" alt="Ikon för AI Precision Recall Lab" width="96" height="96">
+<img src="web/icon.svg" alt="Ikon för AI Precision Recall Lab" width="96" height="96">
 
 # AI Precision Recall Lab
 
@@ -53,19 +53,19 @@ Matrisen: modellens svar i raderna, sanningen i kolumnerna; läs namnet bakläng
 
 - **Mus och tangentbord:** dra tröskelns handtag, eller tryck var som helst på bandet eller högen och dra; scrollhjulet flyttar linjen 0,01. ↑ / ↓ eller W / S flyttar den 0,01 (med Shift 0,05), Page Up / Page Down 0,10. I en top-k-sökning ändrar samma tangenter k. Med granskningsdisken flyttar Q / A zonens nedre kant, och ett klick på ett föremål skickar det till människor. Esc eller P pausar. I menyerna flyttar piltangenterna mellan knapparna och Mellanslag / Enter trycker på den markerade.
 - **Pekskärm:** sätt ett finger var som helst på bandet eller högen och dra uppåt eller nedåt: linjen följer rörelsen, inte fingret, så tummen täcker aldrig föremålen den bedömer. Det stora handtaget till höger kan dras direkt; granskningszonen har ett eget lila handtag till vänster, och ett tryck på ett föremål skickar det till granskning. På mobiler går spelet i helskärm (Safari på iPhone stannar i fönster och fungerar ändå).
-- **Kampanj:** du driver Cutoff & Co. och tar uppdrag från kunder: tre akter, tolv uppdrag. Genomgången visar kundens priser för de fyra utfallen, målet (t.ex. Precision ≥ 0,90 över hela uppdraget), modellkortet och en snabbfråga med bonus. **Stjärnor:** ★ målet nått, ★★ även vinstmålet, ★★★ även 90 % av vad den bästa fasta tröskeln hade tjänat på exakt samma ström. Akt 1 lär ut matrisen, precision, recall, F1 och kostnader; akt 2 bjuder på en accuracy-fälla, en influensasäsong (basfrekvensen skiftar), en granskningsdisk med människor och en spamvåg (drift, driftvakten med PSI, omträning); akt 3 en bedrägeriliga som lär sig din linje, top-k-sökning för en AI-assistent och den stora pitchen: tre kunder i rad som alla ändrar sina priser halvvägs.
-- **Labbet:** lägg pengarna på mer data och bättre särdrag (de två pucklarna glider isär och AUC växer), kalibrering, driftvakten och granskningsdisken.
+- **Kampanj:** du driver Cutoff & Co. och tar uppdrag från kunder: tre akter, tolv uppdrag. Genomgången visar kundens priser för de fyra utfallen, målet (t.ex. Precision ≥ 0,90 över hela uppdraget), modellkortet och en snabbfråga med bonus. **Stjärnor:** ★ målet nått, ★★ även vinstmålet, ★★★ även 90 % av vad den bästa fasta tröskeln hade tjänat på exakt samma ström. Akt 1 lär ut matrisen, precision, recall, F1 och kostnader; akt 2 bjuder på en accuracy-fälla, en influensasäsong (basfrekvensen skiftar), en granskningsdisk med människor och en spamvåg (drift, driftvakten med PSI, omträning); akt 3 en bedrägeriliga som lär sig din linje, top-k-sökning för en AI-assistent och den stora pitchen: tre kunder i rad som alla ändrar sina priser halvvägs. Knappen **×2** i övre raden kör ett uppdrag i dubbel hastighet (samma föremål, pengar och stjärnor, bara snabbare).
+- **Labbet:** lägg pengarna på mer data och bättre särdrag (de två pucklarna glider isär och AUC växer), kalibrering, driftvakten och granskningsdisken. Tryck på ett kort (eller peka på det) för att prova uppgraderingen: AUC-ändringarna syns på kortet och på modellkorten; knappen köper den.
 - **Fusklapp:** varje mått på ett kort — formeln i matrisens färger, en minnesregel, en fallgrop, ett exempel och en levande bild av högen — plus en hjälpare ”Vilket mått?”. Tryck två gånger på en måttstapel under spelet för att öppna dess kort.
 - **Sandlåda:** spelskärmen utan pengar och mål, med reglage för scenario, basfrekvens, separationen d′, kalibrering, priser, granskningszon och top-k-läge; **Generera 1 000** fyller högen direkt.
 - **Svårighetsgrad** (på startskärmen och i varje försök-igen-dialog, sparas): **Lätt** — långsammare band, bättre modell, en svag ledtråd om den sanna klassen, den kostnadsoptimala linjen alltid synlig, mildare mål; **Medel** — uppdragen som kunderna skrev dem; **Svår** — snabbare band, svagare modell, strängare mål, ingen förvarning före incidenter.
 - **Språk** EN · RU · SV och **Ljud** på / av på startskärmen, båda sparas.
 - **Molnsparning** (valfritt): **Logga in med Google** på startskärmen så synkas kampanjen — pengar, uppgraderingar, stjärnor och rekord — mellan dina enheter; inställningarna stannar på varje enhet. Utan inloggning stannar allt i webbläsaren.
 
-<p align="center"><img src="screenshot.png" alt="Ett uppdrag i spel: bandet med brev, tröskellinjen, högen, förväxlingsmatrisen och måttstaplarna" width="800"></p>
+<p align="center"><img src="web/screenshot.png" alt="Ett uppdrag i spel: bandet med brev, tröskellinjen, högen, förväxlingsmatrisen och måttstaplarna" width="800"></p>
 
 ## Kör lokalt
 
-Öppna `index.html` i en webbläsare (det fungerar från `file://`), eller servera mappen: `python -m http.server` och öppna http://localhost:8000/ (behövs för att installera som app). Inget byggsteg, inga beroenden.
+Öppna `web/index.html` i en webbläsare (det fungerar från `file://`), eller servera den mappen: `python -m http.server` i `web/` och öppna http://localhost:8000/ (behövs för att installera som app). Inget byggsteg, inga beroenden.
 
 Utveckling (Node 20+): `node --test tests/*.test.js` kör simuleringens tester; `node tools/balance-check.js` spelar alla uppdrag utan webbläsare; övriga verktyg står i [AGENTS.md](AGENTS.md#commands).
 

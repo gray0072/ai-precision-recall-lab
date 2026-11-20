@@ -4,7 +4,8 @@
 // AI Precision Recall Lab — the HUD over the play screen (spec 04 §4.1, 01 §3.2): chips on the left (what is
 // being played; items decided; in a contract also its money, the goal chip, the outbreak meter, the incident
 // countdown and the drift monitor's PSI with a small chart; the review desk's queue with its "Desk full" flash),
-// buttons on the right (Retrain with its progress, the sandbox's knobs, sound 🔊 / 🔇, pause), and the
+// buttons on the right (Retrain with its progress, the sandbox's knobs, a contract's ×2 speed, sound 🔊 / 🔇,
+// pause), and the
 // banners of incidents, the drift alert and the retrain. The goal chip shows the cumulative value
 // of the goal's metric against the target: no colour for the first GOAL_GRACE_ITEMS items, then green when it
 // is met, amber within GOAL_CLOSE, red below. A top-k contract counts queries and its goal is the mean R@k;
@@ -22,6 +23,8 @@ const Hud = (() => {
     $('soundBtn').addEventListener('click', (e) => { actions.sound(); e.currentTarget.blur(); });
     $('pauseBtn').addEventListener('click', (e) => { actions.pause(); e.currentTarget.blur(); });
     $('retrainBtn').addEventListener('click', (e) => { actions.retrain(); e.currentTarget.blur(); });
+    $('speedBtn').addEventListener('click', (e) => { actions.speed(); e.currentTarget.blur(); });
+    $('speedBtn').title = tr('Double speed');
     $('knobsBtn').title = tr('Sandbox knobs');
     $('pauseBtn').title = tr('Pause (Esc)');
     $('tSlider').setAttribute('aria-label', tr('Threshold'));
@@ -97,9 +100,14 @@ const Hud = (() => {
       if (!c) $('hudGoal').hidden = true;
       $('hudMeter').hidden = !c || run.allowance === null;
       $('knobsBtn').hidden = c;
+      $('speedBtn').hidden = !c;
       if (!c) { $('hudPsi').hidden = true; $('retrainBtn').hidden = true; $('hudIncident').hidden = true; }
       $('hudMeter').title = c && run.allowance !== null ? tr('Outbreak meter: every missed positive adds one; at {n} the contract fails.', { n: run.allowance }) : '';
       $('hudMoney').title = c ? tr("This contract's money so far; the fee is paid at the end.") : '';
+    });
+    flag('speedBtn', 'on', State.fast, (on) => {
+      $('speedBtn').classList.toggle('on', on);
+      $('speedBtn').setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     put('soundBtn', GameAudio.on ? '🔊' : '🔇');
     if (shown.soundTitle !== GameAudio.on) {

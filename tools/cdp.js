@@ -5,7 +5,7 @@
 // Puppeteer needed): starts Chrome, runs a steps file against the page, saves the screenshots,
 // prints what the steps log and every uncaught error of the page, then stops Chrome and all its
 // child processes. Used by an agent to see a change working on a phone or a desktop.
-// Copied from the ivan repo (tools/cdp.js); the game is at the repo root, so page() opens index.html there.
+// Copied from the ivan repo (tools/cdp.js); the game is in web/, so page() opens web/index.html.
 //
 // Usage: node --experimental-websocket tools/cdp.js <steps.js> [out-dir] [--port N] [--limit S]
 //   out-dir  where the screenshots go (default: cdp-out in the system temp folder)
@@ -15,13 +15,13 @@
 //
 //   module.exports = async ({ page, phone, ev, shot, tap, key, sleep, log }) => {
 //     await phone(390, 844);                         // or desktop(1366, 800)
-//     await page();                                  // the game at the repo root (or a folder, or a full URL)
+//     await page();                                  // the game in web/ (or another folder, or a full URL)
 //     await ev(`I18N.set('en')`);
 //     await shot('start');                           // <out-dir>/start.png
 //     log(await ev(`State.screen`));
 //   };
 //
-//   page(where = '.', waitMs = 2500)  open index.html of the repo root or a folder (file://), or a URL, and wait
+//   page(where = 'web', waitMs = 2500)  open index.html of web/ or another folder (file://), or a URL, and wait
 //   phone(w, h) / desktop(w, h)       the viewport: a phone is 2× pixels, touch, pointer: coarse
 //   ev(js)                            evaluate in the page (awaits promises), returns the value as
 //                                     JSON-able data, or 'EXC: …' if it threw
@@ -94,7 +94,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const api = {
     send, sleep,
     log: (...a) => console.log(...a),
-    page: async (where = '.', waitMs = 2500) => {
+    page: async (where = 'web', waitMs = 2500) => {
       const url = /^[a-z]+:/.test(where) ? where : 'file:///' + path.join(repo, where, 'index.html').replace(/\\/g, '/');
       await send('Page.navigate', { url });
       await sleep(waitMs);

@@ -5,7 +5,7 @@
 // briefing, contract, results, the Lab, sandbox, cheat sheet, pause, the New campaign confirmation) and runs the
 // play screen. Each frame (limited to MAX_FPS) it moves the run (Stream.update and the review desk: in the
 // sandbox scaled by its speed unless the belt is paused; in a contract unless a coach mark holds it, then the
-// incidents and the retrain), checks the contract's end
+// incidents and the retrain, all at FAST_SPEED while the HUD's ×2 is on), checks the contract's end
 // (Contract.update), draws the canvas (Render.frame) and lets the HUD, the live panel and the charts redraw
 // what changed. Pause (01 §12): Esc / P / the HUD button, and by itself when the tab is left. In a top-k run
 // the same controls set k (sim/topk.js: the handle's line value ↔ k, one key step = one document). The attract
@@ -31,7 +31,7 @@ const Game = (() => {
   function showPlay(on) {
     $('play').hidden = !on;
     $('play').classList.remove('demo');
-    if (!on) { SandboxPanel.setOpen(false); LivePanel.reset(); $('tip').hidden = true; Coach.stop(); }
+    if (!on) { SandboxPanel.setOpen(false); LivePanel.reset(); Coach.stop(); }
   }
 
   // ---------- the attract demo (01 §9) ----------
@@ -236,7 +236,7 @@ const Game = (() => {
     if (!playing() || State.paused || !State.run) return;
     State.paused = true;
     saveSandbox();
-    $('tip').hidden = true;
+    LivePanel.reset();
     Screens.showPause();
   }
   function resume() {
@@ -318,7 +318,8 @@ const Game = (() => {
     if (!State.paused) {
       if (run.kind === 'sandbox') { if (!run.frozen) { Stream.update(dt * run.knobs.speed); Review.update(); } }
       else {
-        if (!State.held) { Stream.update(dt); Review.update(); Incidents.update(dt); }
+        const sdt = State.fast ? dt * FAST_SPEED : dt;
+        if (!State.held) { Stream.update(sdt); Review.update(); Incidents.update(sdt); }
         Coach.update();
         if (Contract.update()) {
           if (!endAt) endAt = now + END_DELAY_MS;
@@ -344,6 +345,7 @@ const Game = (() => {
     });
     const d = Store.get('difficulty', DIFFICULTY_DEFAULT);
     State.difficulty = DIFFICULTIES[d] ? d : DIFFICULTY_DEFAULT;
+    State.fast = Store.get('fast', 'off') === 'on';
     Campaign.init({
       load: () => Store.getJSON('campaign.v1', null),
       save: (data) => Store.setJSON('campaign.v1', data),
@@ -388,6 +390,7 @@ const Game = (() => {
       knobs: () => SandboxPanel.setOpen(!SandboxPanel.isOpen()),
       sound: () => setSound(!GameAudio.on),
       pause,
+      speed: () => { State.fast = !State.fast; Store.set('fast', State.fast ? 'on' : 'off'); },
       retrain: () => { if (State.run && Incidents.retrain(State.run)) Screens.banner(tr('Retraining on the new data: {s} s.', { s: RETRAIN_S })); }
     });
     LivePanel.onCard = cardFromPlay;

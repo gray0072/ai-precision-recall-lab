@@ -23,6 +23,7 @@ const State = {
   k: TOPK_K_DEFAULT,            // the knob of a top-k run (sim/topk.js): the k best documents of each query are shown
   paused: false,                // the pause dialog is open (01 §12): the belt, the stream and the timers stop
   held: false,                  // a coach mark is waiting for the player (01 §13): the stream stops, the line still moves
+  fast: false,                  // the HUD's ×2 is on: a contract runs at FAST_SPEED (01 §12; remembered by game.js)
   highlight: null,              // the live panel points at a metric: { id, num: ['TP'], den: ['TP', 'FP'] }
   review: null                  // the review desk of the run (sim/review.js): band edge, queue, level; null without one
 };

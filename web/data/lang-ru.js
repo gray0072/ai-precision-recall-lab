@@ -2,7 +2,7 @@
 
 // ============================================================
 // AI Precision Recall Lab — Russian texts (spec 04 §8), keyed by the English source text that tr() is
-// called with (core/i18n.js). Every key of the game has an entry; node tools/i18n-check.js . checks it.
+// called with (core/i18n.js). Every key of the game has an entry; node tools/i18n-check.js web checks it.
 // Metric names stay English, with the Russian term next to them where it helps (spec 03 §4):
 // «точность» is precision only; accuracy is «доля верных ответов».
 // ============================================================
@@ -175,6 +175,7 @@ const TEXT_RU = {
   '{n} items': 'объектов: {n}',
   'Outbreak meter: every missed positive adds one; at {n} the contract fails.': 'Счётчик вспышки: каждый пропущенный положительный добавляет единицу; на {n} контракт провален.',
   'This contract\'s money so far; the fee is paid at the end.': 'Деньги этого контракта на данный момент; гонорар выплачивается в конце.',
+  'Double speed': 'Двойная скорость',
   'Sound on': 'Звук вкл.',
   'Sound off': 'Звук выкл.',
   'Desk full': 'Отдел занят',
@@ -201,7 +202,7 @@ const TEXT_RU = {
   'Buy for {m}': 'Купить за {m}',
   'Bought: {name}.': 'Куплено: {name}.',
   'Balance {m}': 'Баланс {m}',
-  'Upgrades are kept for the whole campaign and work on replays too. Point at one to see what it changes.': 'Улучшения сохраняются на всю кампанию и действуют и при переигровке. Наведите на улучшение, чтобы увидеть, что оно меняет.',
+  'Upgrades are kept for the whole campaign and work on replays too. Tap or point at one to try it on and see what it changes.': 'Улучшения сохраняются на всю кампанию и действуют и при переигровке. Нажмите на улучшение или наведите на него, чтобы примерить и увидеть, что оно меняет.',
 
   // ---- ui/livepanel.js ----
   'True positive: flagged, and really positive.': 'Истинно положительный (TP): помечен и действительно положительный.',
@@ -224,6 +225,7 @@ const TEXT_RU = {
   'mean over {n} queries of': 'среднее по запросам ({n}) от',
   'pooled': 'суммарно',
   'Last {q} queries ({n} documents), at the current k.': 'Последние запросы: {q} (документов: {n}), при текущем k.',
+  'Tap the bar again for its cheat sheet card, anywhere else to close this.': 'Нажмите на полоску ещё раз — откроется карточка из шпаргалки; в любом другом месте — подсказка закроется.',
   'Last {n} items, at the current threshold.': 'Последние объекты: {n}, при текущем пороге.',
   'all {n}': 'всего {n}',
   '{w} in the last {n} documents at the current k; {a} decided this way since the start.': '{w} среди последних документов ({n}) при текущем k; с начала решено так: {a}.',

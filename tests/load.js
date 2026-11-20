@@ -10,7 +10,7 @@
 
 const fs = require('fs'), path = require('path'), vm = require('vm');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', 'web');   // the game's folder
 const FILES = [
   'constants.js',
   'data/scenarios.js', 'data/contracts.js', 'data/upgrades.js', 'data/glossary.js', 'data/quiz.js', 'data/coach.js',

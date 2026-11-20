@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 'use strict';
 
-// Copied from the ivan repo; here: node tools/i18n-check.js . (the game is the repo root).
+// Copied from the ivan repo; here: node tools/i18n-check.js web (the game is in web/).
 // Checks a translated game's texts: every literal tr('English text') in its JS must have an entry
 // in each of its language tables (data/lang-<xx>.js, a `const TEXT_<XX> = { ... }`), and the tables
-// must have the same keys; so must the [data-i18n] texts of the root's .html files (added here: the ivan
+// must have the same keys; so must the [data-i18n] texts of the folder's .html files (added here: the ivan
 // version reads only the JS), and so must the texts of the data/ tables, which tr() gets through a variable
 // (added here too: the text fields of DATA_TEXT_FIELDS in constants.js + data/*.js, and the name tables of
 // UI_NAME_TABLES in ui/). Texts built at run time are not seen.
@@ -59,7 +59,7 @@ for (const f of files) {
   }
 }
 
-// the static texts of the root's .html files: a [data-i18n] element's inner HTML is its key (core/i18n.js)
+// the static texts of the folder's .html files: a [data-i18n] element's inner HTML is its key (core/i18n.js)
 const reDom = /<(\w+)\b[^>]*\bdata-i18n\b[^>]*>([\s\S]*?)<\/\1>/g;
 for (const f of fs.readdirSync(root).filter((n) => n.endsWith('.html'))) {
   const src = fs.readFileSync(path.join(root, f), 'utf8');

@@ -37,7 +37,7 @@ Under or next to the belt (layout in 04 §4):
 - **Confusion matrix**: a 2×2 grid of counts. Rows = what the model said (Flagged / Passed), columns = what was true (Positive / Negative), matching the pile's layout (flagged above). Each cell pulses when an item lands in it. Two numbers per cell: the rolling window count, and in small print the contract total.
 - **Metric bars**: Precision, Recall, F1, Accuracy, FPR (plus the contract's own metric if it is another one, e.g. F2) as horizontal bars 0–1 with the value, a tick for the contract's target and colour when the target is broken. Values are on the rolling window. A metric with an empty denominator shows "—" (02 §3.2).
 - **Charts** (tabs on small screens): ROC curve, PR curve, and (Easy, Sandbox, results) the profit curve. Each shows the model's curve (from the validation set, 02 §4), the **operating point** at the current threshold as a filled dot that slides along the curve as the line moves, and the live rolling-window point as a hollow ring that jitters around it (sampling noise, made visible).
-- **Explain on hover/tap**: pointing at a metric bar highlights the matrix cells and the pile regions it is made of (numerator bright, denominator outlined) and shows a tooltip with the formula filled with the live numbers: `Precision = TP / (TP + FP) = 42 / (42 + 7) = 0.86`. A second tap or click opens its cheat sheet card (03 §4) as an overlay; during a contract this pauses the game.
+- **Explain on hover/tap**: pointing at a metric bar highlights the matrix cells and the pile regions it is made of (numerator bright, denominator outlined) and shows a tooltip with the formula filled with the live numbers: `Precision = TP / (TP + FP) = 42 / (42 + 7) = 0.86`. A tap or click pins the tooltip; a second one on the same bar opens its cheat sheet card (03 §4) as an overlay (during a contract this pauses the game), and a tap or click anywhere else, the tooltip included, closes it.
 
 ## 2. Campaign
 
@@ -60,7 +60,8 @@ Before every contract a briefing panel shows:
 
 ### 3.2 During the contract
 
-- The HUD (04 §4) shows the contract, items left, money for this contract, the goal chip (green while the cumulative value meets the target, amber while it is within 0.05, red below; hidden for the first `GOAL_GRACE_ITEMS` = 30 items, when the numbers are too noisy to mean anything), special meters, pause and sound.
+- The HUD (04 §4) shows the contract, items left, money for this contract, the goal chip (green while the cumulative value meets the target, amber while it is within 0.05, red below; hidden for the first `GOAL_GRACE_ITEMS` = 30 items, when the numbers are too noisy to mean anything), special meters, a **×2** button, pause and sound.
+- **Double speed**: the HUD's ×2 button runs the contract at `FAST_SPEED` (2): the belt, the arrivals, the review desk, the incident countdowns and the retrain all go twice as fast in real time; the items, the money and the stars are the same as at ×1. It is remembered (`prLab.fast`) and has no effect in the sandbox, which has its own speed slider (§7).
 - **Incidents** (§6) may happen at set points of the contract, announced by a banner (on Easy and Medium 10 s ahead with a countdown; on Hard when they start).
 - With the review desk (§5) the player can also send single items to human review by tapping them on the belt.
 
@@ -96,7 +97,9 @@ The results screen shows:
 
 ## 5. The Lab (upgrades)
 
-The Lab is a screen reached from the map and the results; it opens after C01 (a star on it). It shows the **model card** of each scenario family (AUC now and after the selected upgrade, with a mini ROC that animates from the old curve to the new one when the player points at an upgrade) and the list of upgrades (03 §3) with their price, effect and state (locked / can buy / bought).
+The Lab is a screen reached from the map and the results; it opens after C01 (a star on it). It shows the **model card** of each scenario family (AUC now and after the selected upgrade, with a mini ROC that animates from the old curve to the new one when the player previews an upgrade) and the list of upgrades (03 §3) with their price, effect and state (locked / can buy / bought).
+
+An upgrade is previewed while the mouse points at it (or its Buy button has the keyboard focus) and **tried on** by a tap or click on its card, which stays until another card or the same one is tapped; the tried card also lists the AUC changes itself, so a phone sees them without scrolling up. A touch alone never previews: on a phone a scroll starts with a finger on a card, and it must not flash the model cards. Buying is the card's button.
 
 Upgrades are bought with money and kept for the whole campaign. Kinds:
 

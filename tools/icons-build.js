@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Copied from the ivan repo; here the game is the repo root: node tools/icons-build.js . [--check]
+// Copied from the ivan repo; here the game is in web/: node tools/icons-build.js web [--check]
 // Packs the drawings a project needs: finds every arrow, symbol and emoji typed in its code and translations,
 // writes them to its data/icons.js and copies the engine (tools/icons/engine.js) to its core/icons.js (a project
 // with no data/ or core/ folder: icons-data.js and icons.js in its root). A one-colour drawing comes from

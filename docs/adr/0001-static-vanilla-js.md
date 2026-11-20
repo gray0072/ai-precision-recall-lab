@@ -16,6 +16,6 @@ The game is a demo for GitHub Pages and a PWA for phones. The owner already has 
 Option 1. The `ivan` rules apply in full (AGENTS.md restates them); the game lives at the repo root instead of a gallery folder.
 
 ## Consequences
-- Pages serves the repo root from `main`; `.nojekyll` keeps Jekyll away from `docs/`.
+- Pages serves the repo root from `main`; `.nojekyll` keeps Jekyll away from `docs/`. (Superseded by [ADR-0008](0008-game-in-web-folder.md): the game moved to `web/`, deployed by a workflow.)
 - Correctness of the math is guarded by Node tests over `sim/` loaded into a `vm` context, since there is no type checker.
 - Reversal: the `sim/` files are framework-free and could be wrapped by a React UI later without changing the math.

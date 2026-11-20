@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Renders the PWA icons with headless Chrome (no other tools needed). Copied from the ivan repo and adapted:
-# here the game is the repo root, so `.` writes the PNGs into the root next to the SVGs.
+# here the game is in web/, so `web` writes the PNGs into web/ next to the SVGs.
 #   icon.svg          -> icon-192.png, icon-512.png                (manifest "any", rounded tile, transparent corners)
 #   icon-maskable.svg -> icon-maskable-512.png, apple-touch-icon.png (180 px)  (full-bleed square)
-# Usage: bash tools/pwa-icons.sh .        (or any folder that holds an icon.svg and an icon-maskable.svg)
+# Usage: bash tools/pwa-icons.sh web      (or any folder that holds an icon.svg and an icon-maskable.svg)
 # After a re-render bump ?v=N of the icons in index.html and manifest.webmanifest.
 set -euo pipefail
 CHROME="${CHROME:-/c/Program Files/Google/Chrome/Application/chrome.exe}"
@@ -25,7 +25,7 @@ render() {  # render <svg> <size> <out.png>
   echo "  $3"
 }
 
-[ $# -gt 0 ] || { echo "usage: bash tools/pwa-icons.sh <folder>   (. = the repo root)" >&2; exit 2; }
+[ $# -gt 0 ] || { echo "usage: bash tools/pwa-icons.sh <folder>   (web = the game)" >&2; exit 2; }
 for dir in "$@"; do
   icon="$dir/icon.svg"; mask="$dir/icon-maskable.svg"
   [ -f "$icon" ] || { echo "no $icon" >&2; exit 1; }

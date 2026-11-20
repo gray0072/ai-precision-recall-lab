@@ -111,5 +111,6 @@ const SANDBOX_PREVALENCE_MIN = 0.005;   // the base rate slider, logarithmic
 const SANDBOX_PREVALENCE_MAX = 0.5;
 const SANDBOX_DPRIME_MAX = 4;       // the separation slider runs 0 … this
 const SANDBOX_SPEEDS = [0.25, 0.5, 1, 2, 4];   // the speed slider's stops (× sim time)
+const FAST_SPEED = 2;               // the HUD's ×2 button in a contract: factor on sim time (the belt, the arrivals, the timers)
 const SANDBOX_PRICE_MAX = 20;       // the sandbox's prices per outcome are whole $ in −this … +this
 const SANDBOX_PRICES = { TP: 1, FP: -1, FN: -1, TN: 0 };   // the sandbox's default prices (profit curve, ghost line)

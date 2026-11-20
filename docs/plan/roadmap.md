@@ -52,6 +52,6 @@ flowchart TD
 ## Rules for every iteration
 
 - Spec first: if the plan or the spec turns out wrong, update the doc in the same change.
-- Every text the player sees goes through `tr()`. The game is English only until I07 (owner's decision); from I07 on every text also gets its RU and SV entries in the same change (`node tools/i18n-check.js .`).
+- Every text the player sees goes through `tr()`. The game is English only until I07 (owner's decision); from I07 on every text also gets its RU and SV entries in the same change (`node tools/i18n-check.js web`).
 - The GitHub repo and Pages come at the end (I07); until then everything stays local.
 - `node --test tests/*.test.js` green; `?v=N` bumped for every changed CSS/JS file; a short browser check with `tools/cdp.js` (phone and desktop) for UI changes.

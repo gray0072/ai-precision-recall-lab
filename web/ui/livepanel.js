@@ -6,7 +6,8 @@
 // the small one all the decisions made), the metric bars (Precision, Recall, F1, Accuracy, FPR on the window;
 // "—" for an empty denominator, 02 §3.2) and the explanations: pointing at a bar (hover, or a tap / click
 // that pins it) highlights the matrix cells and the pile regions it is made of — numerator bright, the rest
-// of the denominator outlined — and shows its formula filled with the live numbers. Formula view (sandbox)
+// of the denominator outlined — and shows its formula filled with the live numbers; a pinned tooltip closes on a
+// tap / click on it or anywhere outside the bars (a touch screen has no "pointer leaves"). Formula view (sandbox)
 // shows the filled formula under every bar all the time. In a contract the goal's bar carries a tick at the
 // target and turns red while the window is below it; a second tap / click on a pinned bar opens its cheat sheet
 // card (onCard, set by game.js). A top-k run (02 §7) shows two bars instead: P@k (the mean over the window's
@@ -94,6 +95,12 @@ const LivePanel = (() => {
 
   let pinned = null;
   let pointed = null;
+  // a pinned tooltip lets go on a press anywhere but the bars (on the tooltip itself too)
+  window.addEventListener('pointerdown', (e) => {
+    if (!pinned || (e.target.closest && e.target.closest('#barsBox .bar'))) return;
+    pinned = null;
+    point(null);
+  }, true);
   let last = null;      // { c, totals, metrics, n }: the numbers on screen
 
   function fmt(v) { return v === null ? '—' : v.toFixed(2); }
@@ -128,6 +135,7 @@ const LivePanel = (() => {
       cells[o].classList.toggle('hlDim', !!m && !m.den.includes(o));
     }
     for (const k in rows) rows[k].row.classList.toggle('on', k === id);
+    tip.classList.toggle('pinned', !!m && pinned === id);
     if (!m) { tip.hidden = true; return; }
     fillTip();
     tip.hidden = false;
@@ -138,7 +146,8 @@ const LivePanel = (() => {
     if (!pointed || !last) return;
     const m = byId[pointed], v = last.metrics[m.id];
     tip.innerHTML = '<div class="tipF">' + filledHtml(m, last.c, v) + '</div>' +
-      '<div class="tipAsk"></div><div class="tipNote fine"></div>';
+      '<div class="tipAsk"></div><div class="tipNote fine"></div><div class="tipHint fine"></div>';
+    tip.querySelector('.tipHint').textContent = pinned === pointed ? tr('Tap the bar again for its cheat sheet card, anywhere else to close this.') : '';
     tip.querySelector('.tipAsk').textContent = v === null ? m.empty() : m.ask();
     tip.querySelector('.tipNote').textContent = last.topk
       ? tr('Last {q} queries ({n} documents), at the current k.', { q: last.queries, n: last.n })

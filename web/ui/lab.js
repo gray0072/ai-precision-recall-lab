@@ -4,8 +4,11 @@
 // AI Precision Recall Lab — the Lab screen (spec 01 §5, 03 §3, 04 §3): the balance; a model card per scenario
 // family (its scenarios with the AUC of their base d' plus the Lab's bonus, 02 §2.1, and a mini ROC of the
 // binormal model) and the upgrade cards (price, effect, why it works, the state: bought / needs … / not enough
-// money / Buy). Pointing at an upgrade (hover or focus) previews it: the families it touches show "before →
-// after" AUC and their mini ROC morphs from the old curve to the new one. Buying goes through Campaign.buy.
+// money / Buy). An upgrade is previewed while the mouse points at it or its button has the keyboard focus, and
+// it is "tried on" by a tap / click on its card (it stays until another card, or the same one, is tapped): the
+// families it touches show "before → after" AUC, their mini ROC morphs from the old curve to the new one, and
+// the tried card lists the same AUC changes itself, so a phone sees them without scrolling up. A touch never
+// previews by itself: a finger that starts a scroll on a card must not flash the AUCs. Buying: Campaign.buy.
 // Reads Campaign, UPGRADES, FAMILIES, SCENARIOS; game.js opens it from the map and the results with a Back action.
 // ============================================================
 
@@ -14,7 +17,9 @@ const Lab = (() => {
   const P = PALETTE;
   const MORPH_MS = 450;
   let back = () => {};
-  let preview = null;          // the upgrade id pointed at
+  let preview = null;          // the upgrade id previewed: the one pointed at, else the one tried on
+  let hover = null;            // the upgrade id under the mouse or with the keyboard focus
+  let tried = null;            // the upgrade id tried on by a tap / click on its card
   const cards = {};            // family id → { canvas, rows: { scenario: el }, from, to, t0 }
 
   function el(tag, cls, text) {
@@ -129,6 +134,7 @@ const Lab = (() => {
     for (const u of UPGRADES) {
       const st = Campaign.upgradeState(u.id);
       const c = el('div', 'labUpgrade ' + st);
+      c.dataset.upgrade = u.id;
       const head = el('div', 'labUpHead');
       head.appendChild(el('b', '', tr(u.name)));
       head.appendChild(el('span', 'num labPrice', usd(UPGRADE_PRICES[u.id])));
@@ -141,32 +147,69 @@ const Lab = (() => {
       b.addEventListener('click', () => {
         if (!Campaign.buy(u.id)) return;
         Screens.banner(tr('Bought: {name}.', { name: tr(u.name) }));
-        preview = null;
+        hover = null;
+        tried = null;
         render();
         const next = $('labUpgrades').querySelector('.btn:not([disabled])') || $('labBackBtn');
         next.focus();
       });
-      const point = () => { preview = Campaign.owns(u.id) ? null : u.id; renderFamilies(); };
-      const leave = () => { if (preview === u.id) { preview = null; renderFamilies(); } };
-      c.addEventListener('pointerenter', point);
-      c.addEventListener('pointerleave', leave);
-      b.addEventListener('focus', point);
+      // the mouse and the keyboard focus preview; a touch does not (a scroll starts with a finger on a card)
+      const point = () => { hover = Campaign.owns(u.id) ? null : u.id; setPreview(); };
+      const leave = () => { if (hover === u.id) { hover = null; setPreview(); } };
+      c.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') point(); });
+      c.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') leave(); });
+      b.addEventListener('focus', () => { if (b.matches(':focus-visible')) point(); });
       b.addEventListener('blur', leave);
+      // a tap / click on the card (not on its button) tries the upgrade on; a second one takes it off
+      c.addEventListener('click', (e) => {
+        if (e.target.closest('button') || Campaign.owns(u.id)) return;
+        tried = tried === u.id ? null : u.id;
+        setPreview();
+      });
+      c.appendChild(el('div', 'labGain'));
       c.appendChild(b);
       box.appendChild(c);
     }
   }
 
+  function setPreview() {
+    preview = hover || tried;
+    for (const c of $('labUpgrades').children) c.classList.toggle('trying', c.dataset.upgrade === tried);
+    renderFamilies();
+    renderGains();
+  }
+
+  // the tried card's own list: each scenario whose AUC the upgrade changes, "AUC before → after"
+  function renderGains() {
+    for (const c of $('labUpgrades').children) {
+      const box = c.querySelector('.labGain');
+      box.textContent = '';
+      const u = c.dataset.upgrade;
+      if (u !== tried) continue;
+      for (const fam of FAMILIES) {
+        const b = bonus(fam.id), nb = bonus(fam.id, u);
+        if (nb === b) continue;
+        for (const sc of fam.scenarios) {
+          const r = el('div', 'labScen');
+          r.appendChild(el('span', '', tr(SCENARIOS[sc].name)));
+          r.appendChild(el('b', 'num', 'AUC ' + aucOf(sc, b).toFixed(2) + ' → ' + aucOf(sc, nb).toFixed(2)));
+          box.appendChild(r);
+        }
+      }
+    }
+  }
+
   function render() {
     $('labBalance').textContent = '💰 ' + tr('Balance {m}', { m: usd(Campaign.money) });
-    $('labNote').textContent = tr('Upgrades are kept for the whole campaign and work on replays too. Point at one to see what it changes.');
+    $('labNote').textContent = tr('Upgrades are kept for the whole campaign and work on replays too. Tap or point at one to try it on and see what it changes.');
     buildUpgrades();
-    renderFamilies();
+    setPreview();
   }
 
   function show(onBack) {
     back = onBack || back;
-    preview = null;
+    hover = null;
+    tried = null;
     buildFamilies();
     render();
     Screens.show('lab');

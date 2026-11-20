@@ -2,7 +2,7 @@
 
 // ============================================================
 // AI Precision Recall Lab — Swedish texts (spec 04 §8), keyed by the English source text that tr() is
-// called with (core/i18n.js). Every key of the game has an entry; node tools/i18n-check.js . checks it.
+// called with (core/i18n.js). Every key of the game has an entry; node tools/i18n-check.js web checks it.
 // Metric names stay English, with the Swedish term next to them where it helps (spec 03 §4).
 // Names: the scenarios and clients have Swedish names (Inkorgsvakten, Duvposten, Febergrinden, Hamnkliniken,
 // Bultkontrollen, Bultverken, Kortvakten, Slantbanken, Kommentarspatrullen, Pratkvarnen, Sökrankaren,
@@ -177,6 +177,7 @@ const TEXT_SV = {
   '{n} items': '{n} objekt',
   'Outbreak meter: every missed positive adds one; at {n} the contract fails.': 'Utbrottsmätare: varje missad positiv lägger till en; vid {n} misslyckas kontraktet.',
   'This contract\'s money so far; the fee is paid at the end.': 'Kontraktets pengar hittills; arvodet betalas i slutet.',
+  'Double speed': 'Dubbel hastighet',
   'Sound on': 'Ljud på',
   'Sound off': 'Ljud av',
   'Desk full': 'Disken full',
@@ -203,7 +204,7 @@ const TEXT_SV = {
   'Buy for {m}': 'Köp för {m}',
   'Bought: {name}.': 'Köpt: {name}.',
   'Balance {m}': 'Saldo {m}',
-  'Upgrades are kept for the whole campaign and work on replays too. Point at one to see what it changes.': 'Uppgraderingar behålls under hela kampanjen och gäller även när du spelar om. Peka på en för att se vad den ändrar.',
+  'Upgrades are kept for the whole campaign and work on replays too. Tap or point at one to try it on and see what it changes.': 'Uppgraderingar behålls under hela kampanjen och gäller även när du spelar om. Tryck eller peka på en för att prova den och se vad den ändrar.',
 
   // ---- ui/livepanel.js ----
   'True positive: flagged, and really positive.': 'Sant positiv: flaggad, och verkligen positiv.',
@@ -226,6 +227,7 @@ const TEXT_SV = {
   'mean over {n} queries of': 'medel över {n} sökfrågor av',
   'pooled': 'sammanslaget',
   'Last {q} queries ({n} documents), at the current k.': 'De senaste {q} sökfrågorna ({n} dokument), vid aktuellt k.',
+  'Tap the bar again for its cheat sheet card, anywhere else to close this.': 'Tryck på stapeln igen för dess kort i fusklappen, var som helst annars för att stänga det här.',
   'Last {n} items, at the current threshold.': 'De senaste {n} objekten, vid aktuell tröskel.',
   'all {n}': 'alla {n}',
   '{w} in the last {n} documents at the current k; {a} decided this way since the start.': '{w} i de senaste {n} dokumenten vid aktuellt k; {a} avgjorda så här sedan start.',
