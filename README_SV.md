@@ -59,6 +59,7 @@ Matrisen: modellens svar i raderna, sanningen i kolumnerna; läs namnet bakläng
 - **Sandlåda:** spelskärmen utan pengar och mål, med reglage för scenario, basfrekvens, separationen d′, kalibrering, priser, granskningszon och top-k-läge; **Generera 1 000** fyller högen direkt.
 - **Svårighetsgrad** (på startskärmen och i varje försök-igen-dialog, sparas): **Lätt** — långsammare band, bättre modell, en svag ledtråd om den sanna klassen, den kostnadsoptimala linjen alltid synlig, mildare mål; **Medel** — uppdragen som kunderna skrev dem; **Svår** — snabbare band, svagare modell, strängare mål, ingen förvarning före incidenter.
 - **Språk** EN · RU · SV och **Ljud** på / av på startskärmen, båda sparas.
+- **Molnsparning** (valfritt): **Logga in med Google** på startskärmen så synkas kampanjen — pengar, uppgraderingar, stjärnor och rekord — mellan dina enheter; inställningarna stannar på varje enhet. Utan inloggning stannar allt i webbläsaren.
 
 <p align="center"><img src="screenshot.png" alt="Ett uppdrag i spel: bandet med brev, tröskellinjen, högen, förväxlingsmatrisen och måttstaplarna" width="800"></p>
 
@@ -70,7 +71,7 @@ Utveckling (Node 20+): `node --test tests/*.test.js` kör simuleringens tester; 
 
 ## Tekniska anteckningar
 
-- Ren JavaScript, Canvas 2D och Web Audio; vanliga skript, inget ramverk, ingen bundlare, ingen tredjepartskod ([ADR-0001](docs/adr/0001-static-vanilla-js.md)); diagrammen ritas för hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); alla ljud syntetiseras.
+- Ren JavaScript, Canvas 2D och Web Audio; vanliga skript, inget ramverk, ingen bundlare, ingen tredjepartskod ([ADR-0001](docs/adr/0001-static-vanilla-js.md)) utom molnsparningens inbäddade supabase-js ([ADR-0007](docs/adr/0007-cloud-save-supabase.md)); diagrammen ritas för hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); alla ljud syntetiseras.
 - En deterministisk simulering (`sim/`) med seedade slumpströmmar, skild från ritning och ljud av en händelsebuss; samma kod körs utan webbläsare i testerna och balanskontrollen.
 - En installerbar PWA på GitHub Pages; en ny version plockas upp bara på startskärmen eller kartan, aldrig mitt i ett uppdrag.
 - Byggt med AI-kodagenter, iteration för iteration: [specifikationen](docs/spec/00-overview.md), [planen](docs/plan/roadmap.md), [arkitekturbesluten](docs/adr/README.md) och [prompthistoriken](docs/prompts/README.md) finns i `docs/` (på engelska).

@@ -229,6 +229,55 @@ test('the campaign: a broken save is sanitized field by field; New campaign eras
   assert.equal(Campaign.exists, true);
 });
 
+test('the cloud merge: stars and bests grow from both, money and upgrades from the later copy, a later epoch wins', () => {
+  const { Campaign } = load();
+  const st = memory({
+    money: 100, upgrades: ['U-data-1'], quiz: { C01: true }, coach: ['a'], opened: [], updatedAt: 1000, epoch: 0,
+    contracts: { C01: { easy: { stars: 1, best: 30 }, medium: { stars: 2, best: 5 } } }
+  });
+  Campaign.init(st);
+  let saves = 0;
+  Campaign.onSave = () => saves++;
+  const remote = {
+    money: 250, upgrades: [], quiz: { C02: true }, coach: ['a', 'b'], opened: ['C04'], cheated: false, updatedAt: 2000, epoch: 0,
+    contracts: { C01: { easy: { stars: 3, best: 20 }, medium: { stars: 1, best: null } }, C02: { hard: { stars: 2, best: 60 } } }
+  };
+  assert.equal(Campaign.merge(remote), true);
+  const d = Campaign.data;
+  assert.deepEqual({ ...d.contracts.C01.easy }, { stars: 3, best: 30 });
+  assert.deepEqual({ ...d.contracts.C01.medium }, { stars: 2, best: 5 });
+  assert.deepEqual({ ...d.contracts.C02.hard }, { stars: 2, best: 60 });
+  assert.deepEqual(Object.keys(d.quiz).sort(), ['C01', 'C02']);
+  assert.deepEqual(Array.from(d.coach), ['a', 'b']);
+  assert.deepEqual(Array.from(d.opened), ['C04']);
+  assert.equal(d.money, 250, 'the balance comes with the later copy');
+  assert.deepEqual(Array.from(d.upgrades), [], '…and so do the upgrades it paid for');
+  assert.equal(d.updatedAt, 2000);
+  assert.equal(st.box.value.money, 250, 'written to storage');
+  assert.equal(saves, 0, 'a merge is not a change to send back on its own');
+  assert.equal(Campaign.merge(remote), false, 'merging the same copy again changes nothing');
+
+  // an older copy brings its stars but not its balance
+  assert.equal(Campaign.merge({ money: 1, upgrades: ['U-data-1'], updatedAt: 10, contracts: { C03: { easy: { stars: 1, best: 2 } } } }), true);
+  assert.equal(Campaign.money, 250);
+  assert.equal(Campaign.record('C03', 'easy').stars, 1);
+
+  // New campaign elsewhere (a later epoch) erases this one; an older epoch is ignored
+  assert.equal(Campaign.merge({ money: 7, epoch: 5000, updatedAt: 5000 }), true);
+  assert.equal(Campaign.money, 7);
+  assert.equal(Campaign.played('C01'), false);
+  assert.equal(Campaign.merge({ money: 999, epoch: 0, updatedAt: 9000, contracts: { C01: { easy: { stars: 3, best: 1 } } } }), false);
+
+  // a first campaign gets epoch 0 (a fresh device never erases the cloud's); erasing one starts a new epoch
+  const fresh = load().Campaign;
+  fresh.init(memory());
+  fresh.reset();
+  assert.equal(fresh.data.epoch, 0);
+  fresh.reset();
+  assert.ok(fresh.data.epoch > 0);
+  assert.ok(fresh.data.updatedAt > 0);
+});
+
 test('the Lab: opens after C01, buys with money and prerequisites, keeps upgrades in the save', () => {
   const L = load();
   const store = memory();

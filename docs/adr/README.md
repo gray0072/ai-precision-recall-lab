@@ -12,3 +12,4 @@ Template: [0000-template.md](0000-template.md).
 | [0004](0004-curves-on-raw-scores.md) | Curves and AUC on the raw score; a threshold on calibrated p maps to a raw threshold | Accepted |
 | [0005](0005-psi-short-window.md) | The drift monitor: PSI over 5 quantile bins of the last 80 scores, alert after 10 decisions in a row | Accepted |
 | [0006](0006-adversary-aims-at-the-hindsight.md) | Against the fraud ring, the hindsight-best threshold is aimed at too | Accepted |
+| [0007](0007-cloud-save-supabase.md) | An optional cloud save through Supabase (Google sign-in), with supabase-js vendored | Accepted |

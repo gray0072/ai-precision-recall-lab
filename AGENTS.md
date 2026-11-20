@@ -18,7 +18,7 @@ Instructions for AI coding agents (Claude Code, Codex, Cursor, …) working in t
 | Plan of each iteration | [docs/plan/iterations/](docs/plan/iterations/) |
 | Architecture decisions | [docs/adr/](docs/adr/README.md) |
 | Prompt history (one file per session) | [docs/prompts/](docs/prompts/README.md) |
-| The game | repo root: `index.html`, `styles.css`, `constants.js`, `game.js`, `campaign.js`, `core/`, `data/`, `sim/`, `art/`, `render/`, `ui/` (from I01) |
+| The game | repo root: `index.html`, `styles.css`, `constants.js`, `game.js`, `campaign.js`, `core/`, `data/`, `sim/`, `art/`, `render/`, `ui/` (from I01); `lib/` (vendored supabase-js) and `supabase/schema.sql` for the cloud save |
 | Tests of the simulation | `tests/` (`node --test tests/*.test.js`, from I01/I02) |
 | Tools (headless Chrome, icons, translations, balance) | `tools/` (from I01) |
 
@@ -55,13 +55,14 @@ Every prompt from the owner is saved to the prompt history, **in English first, 
 ## Game rules (from `ivan`)
 
 - **No build step.** No bundler, framework, package manager or `package.json` unless the owner asks for one. The game works by opening `index.html` from `file://` or serving the folder as static files. Node is used only for tests and tools.
-- **No third-party libraries** in the game ([ADR-0001](docs/adr/0001-static-vanilla-js.md), [ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); if one is ever needed it is vendored into `lib/`, never loaded from a CDN.
+- **No third-party libraries** in the game ([ADR-0001](docs/adr/0001-static-vanilla-js.md), [ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); if one is ever needed it is vendored into `lib/`, never loaded from a CDN. The one exception so far: supabase-js for the optional cloud save ([ADR-0007](docs/adr/0007-cloud-save-supabase.md), spec 01 §15.1).
 - **Relative links only** (the site is served from `https://gray0072.github.io/ai-precision-recall-lab/`).
 - **Mobile adaptation is required.** Layout and canvas resize to the window, devicePixelRatio-aware (capped at 2.5); the three layouts of spec 04 §4.2. On touch devices (`matchMedia('(pointer: coarse)')`) the first Start-like button requests fullscreen (`requestFullscreen` with the webkit fallback, `{ navigationUI: 'hide' }`, in try/catch — iPhone Safari stays windowed and must still work). Viewport meta `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`, the `mobile-web-app-capable` / `apple-mobile-web-app-capable` metas, safe-area insets for the HUD, `touch-action: none` and `preventDefault` on the play area. The touch scheme of this game is spec 01 §11.2 (a relative vertical drag, not `ivan`'s split-screen joystick, which does not fit one vertical control); describe it in the READMEs and the in-game help.
 - **The mouse cursor hides in fullscreen** after `CURSOR_HIDE_MS` (2 s) still and shows on any movement (`core/cursor.js`, copied from `ivan/world-aviation/core/cursor.js`).
 - **An installable PWA with a crisp Android icon.** `manifest.webmanifest` with `id` = `"/ai-precision-recall-lab/"` (absolute on purpose: a relative `id` resolves against the origin and clashes with every other app on `gray0072.github.io`), `start_url` / `scope` `"./"`, `display: fullscreen`, three PNG icons rendered from `icon.svg` / `icon-maskable.svg` by `bash tools/pwa-icons.sh .` — never drawn by hand. The maskable icon keeps the artwork inside the central circle of radius ≈ 170 of the 512 viewBox; check the PNG cropped to two thirds before committing. Re-render and bump `?v=N` when an icon changes.
 - **A new deploy reaches an open app but never interrupts it**: `core/update.js`, `AppUpdate.watch(() => idle)`, idle only on the start screen and the map — never during a contract, a pause, a dialog or the results.
 - **Storage is shared with every app on the origin.** Every `localStorage` key starts with `prLab.` (spec 05 §5). Never call `localStorage.clear()`; remove only own keys.
+- **The cloud save's Supabase project is shared** with `ivan`'s games and other apps (spec 01 §15.1). Every table and policy this game adds starts with its prefix, the `localStorage` one in lower case (`prlab_progress`, policies `prlab: …`), never a bare `saves`; the schema lives in `supabase/schema.sql`, safe to run again. The session is kept under `prLab.auth`, never the library's default `sb-<project>-auth-token`. The URL and the publishable key in `core/cloud.js` are not secrets (row-level security guards the rows).
 - **Three difficulty levels** — Easy, Medium, Hard — selectable on the start screen and in every retry / failure dialog (pre-selected to the current level), remembered (`prLab.difficulty`). What each level changes is spec 01 §10; describe it in the READMEs.
 - **Sound can be switched off**: Sound On / Off on the start screen and in the pause dialog, remembered as `prLab.sound`, on by default, read before the first sound; every sound goes through one master gain set to 0 (never a flag checked in each sound).
 - **Debug cheats** (spec 01 §14): keyboard only, a banner says what each did, never mentioned in the in-game help, a run with a cheat never updates stars or bests.
@@ -74,7 +75,7 @@ Every prompt from the owner is saved to the prompt history, **in English first, 
 - **JS and CSS live in separate files — always.** No inline `<script>` / `<style>` blocks, no `style=` / `onclick=` attributes in `index.html`.
 - **Game constants live in `constants.js`**: every gameplay tuning value (speeds, windows, rates, difficulty tables, prices of upgrades, incident parameters) as a top-level `const` with a short comment on units or meaning. Logic files do not declare their own gameplay constants; purely visual constants (palette, sizes of drawings) may stay in their `art/` / `render/` module. Content tables go to `data/`.
 - **Code is organised into folders by meaning** (the tree is spec 05 §2). The repo root keeps only the entry points (`index.html`, `styles.css`, `constants.js`, `game.js`, `campaign.js`) plus docs, icons, manifest and screenshot:
-  - `lib/` — vendored third-party code, never edited (none planned);
+  - `lib/` — vendored third-party code, never edited (`supabase.min.js`, the cloud save's library, copied from `ivan`);
   - `core/` — plumbing with no game rules: i18n, utils, the PRNG, the event bus, audio, input, storage, cursor, icons, update;
   - `data/` — static content as plain declarations, no logic: scenarios, contracts, upgrades, cheat sheet cards, questions, coach marks, translations;
   - `art/` — procedural drawings and the palette;

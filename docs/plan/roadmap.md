@@ -26,6 +26,10 @@ Status values: `todo`, `in progress`, `done`, `skipped`. **This table is the sin
 | I06 | [Act 3: adversary, top-k, finale, attract demo](iterations/I06-act3-topk-demo.md) | I05 | 5 | 1–2 | done |
 | I07 | [Release: sounds, translations, icons, READMEs, GitHub Pages](iterations/I07-release.md) | I06 | 6 | 1–2 | done |
 
+## After the release
+
+- **Cloud save** (2026-11-20, session [S09](../prompts/sessions/2026-11-20_S09_cloud-save.md), owner's request; not an iteration): Google sign-in through the `ivan` games' Supabase project, the campaign synced between devices (spec 01 §15.1, [ADR-0007](../adr/0007-cloud-save-supabase.md)). Done.
+
 ## Dependency graph
 
 ```mermaid

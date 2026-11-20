@@ -4,7 +4,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 
 ## 1. Stack
 
-- HTML5, CSS3, vanilla JavaScript (ES2017+), Canvas 2D, Web Audio. **No build step, no package manager, no framework, no third-party libraries** ([ADR-0001](../adr/0001-static-vanilla-js.md), [ADR-0003](../adr/0003-hand-drawn-canvas-charts.md)).
+- HTML5, CSS3, vanilla JavaScript (ES2017+), Canvas 2D, Web Audio. **No build step, no package manager, no framework, no third-party libraries** ([ADR-0001](../adr/0001-static-vanilla-js.md), [ADR-0003](../adr/0003-hand-drawn-canvas-charts.md)) — with one exception: the optional cloud save's supabase-js, vendored into `lib/` ([ADR-0007](../adr/0007-cloud-save-supabase.md)); the game runs without it.
 - **Plain scripts, not ES modules**, so the game opens from `file://`: each file defines its globals; `index.html` loads them in dependency order.
 - Node (20+) only for tests and tools, never for the game.
 - Deployed as static files to GitHub Pages; an installable PWA.
@@ -18,7 +18,12 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 ├── constants.js            gameplay tuning (02 §8, difficulty table, speeds, windows, prices of upgrades)
 ├── game.js                 main loop: wires buttons and keys to the flow (start, briefing, play, pause,
 │                           results, map, lab, sandbox, cheat sheet, cheats), runs sim/ each frame, renders
-├── campaign.js             the campaign's progress: money, upgrades, stars and bests, unlocks (top-level state module)
+├── campaign.js             the campaign's progress: money, upgrades, stars and bests, unlocks (top-level state module);
+│                           the cloud copy's snapshot and merge (01 §15.1)
+├── lib/
+│   └── supabase.min.js     supabase-js 2.109 (UMD), vendored (from ivan), never edited: the cloud save
+├── supabase/
+│   └── schema.sql          the cloud save's table (prlab_progress, a row per account), run in the Supabase SQL editor
 ├── data/
 │   ├── scenarios.js        the six scenarios (03 §1)
 │   ├── contracts.js        C01–C12: terms, goals, incidents, lessons (03 §2)
@@ -39,7 +44,8 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── storage.js          localStorage under the prLab. prefix, with try/catch and defaults
 │   ├── cursor.js           hides the mouse cursor in fullscreen while it is still (from ivan)
 │   ├── icons.js            the Icons engine (from ivan)
-│   └── update.js           picks up a new deploy, reloading only when idle (from ivan)
+│   ├── update.js           picks up a new deploy, reloading only when idle (from ivan)
+│   └── cloud.js            the optional cloud save: Google sign-in (Supabase Auth), sync of the campaign (01 §15.1)
 ├── sim/                    no drawing, no DOM, no sound: changes state and emits events
 │   ├── state.js            shared state: screen, difficulty, the run, the belt's items, the pile window, the threshold(s)
 │   ├── model.js            the binormal score model, effective d', quantization, Platt scaling, true posterior
@@ -65,7 +71,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── belt.js             score axis, belt, items, gate, threshold line, review band, ghost line
 │   └── pile.js             the mirrored histogram and its four regions
 ├── ui/
-│   ├── screens.js          start, pause, the confirmation dialog; overlay show / hide, focus moving
+│   ├── screens.js          start (with the cloud save's account row), pause, the confirmation dialog; overlay show / hide, focus moving
 │   ├── map.js              the campaign map: acts, contract cards with stars and locks, the balance
 │   ├── briefing.js         the briefing panel and the quick question
 │   ├── hud.js              HUD chips and meters, incident banners
@@ -88,7 +94,7 @@ The code rules are the `ivan` repo's (`D:\Projects\my\ivan\AGENTS.md`, "Code is 
 │   ├── metrics.test.js     every metric, empty denominators, ROC = Mann–Whitney, AP = scikit-learn, profit curve
 │   ├── contract.test.js    prices, p*, goals, outbreak, bankruptcy, hindsight-best, C02 at 0.5 vs the best
 │   ├── campaign.test.js    the data tables, the live contract run (gate money, goal chip, outbreak, cheat F, results,
-│   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save);
+│   │                       stars), the campaign (unlocks, fee on replays, quiz bonus, cheated runs, the save, the cloud merge);
 │   │                       C12's phases (stream, prices, live switch, per-phase results), Act 3 data, the demo
 │   ├── incidents.test.js   the schedule, price changes, a base rate shift, drift and AUC, PSI, C09's alert and
 │   │                       Retrain, stale Platt scaling, live incident events, the cheat I; the adversary: the
@@ -123,7 +129,7 @@ Rules that go with it (from `ivan`): every file starts with a short header comme
 
 ## 3. Load order
 
-`index.html` loads, in this order: `constants.js`; `data/` (icons, scenarios, contracts, upgrades, glossary, quiz, coach, lang-ru, lang-sv); `core/` (utils, rng, events, i18n, storage, audio, input, cursor, icons, update); `sim/` (state, model, stream, metrics, contract, incidents, review, topk, sandbox, demo); `campaign.js`; `art/`; `render/`; `ui/`; `game.js` last. Every local `<link>` / `<script src>` carries `?v=N`, bumped whenever that file changes.
+`index.html` loads, in this order: `lib/supabase.min.js`; `constants.js`; `data/` (icons, scenarios, contracts, upgrades, glossary, quiz, coach, lang-ru, lang-sv); `core/` (utils, rng, events, i18n, storage, audio, input, cursor, icons, update, cloud); `sim/` (state, model, stream, metrics, contract, incidents, review, topk, sandbox, demo); `campaign.js`; `art/`; `render/`; `ui/`; `game.js` last. Every local `<link>` / `<script src>` carries `?v=N`, bumped whenever that file changes.
 
 ## 4. State and events
 
@@ -141,7 +147,9 @@ Every key starts with `prLab.` (the Pages origin `gray0072.github.io` is shared 
 | `prLab.lang` | `en` / `ru` / `sv` |
 | `prLab.sound` | `on` / `off` |
 | `prLab.difficulty` | `easy` / `medium` / `hard` |
-| `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], opened: [ids], cheated }` (`best` = the best contract money on that level, `quiz` = bonuses paid, `opened` = contracts opened by the map cheats); checked field by field on load (`Campaign.sanitize`) |
+| `prLab.campaign.v1` | `{ money, upgrades: [ids], contracts: { C01: { easy: { stars, best }, … } }, quiz: { C01: true }, coach: [ids], lent: [], opened: [ids], cheated, updatedAt, epoch }` (`best` = the best contract money on that level, `quiz` = bonuses paid, `opened` = contracts opened by the map cheats, `updatedAt` = the last save in ms, `epoch` = when New campaign erased an older campaign, 0 for a first one; both for the cloud merge, 01 §15.1); checked field by field on load (`Campaign.sanitize`) |
+| `prLab.cloud` | the Google account the campaign syncs with: `{ user, email }` (01 §15.1); kept after the session ends, so the start screen can say "Signed out — sign in again" |
+| `prLab.auth` | that account's Supabase session, kept by supabase-js (and `prLab.auth-code-verifier` during a sign-in) |
 | `prLab.sandbox.v1` | the sandbox's knobs: `{ scenario, prevalence, dPrime, calibrated, showClass, speed, prices: { TP, FP, FN, TN }, formulas, review, reviewLow, threshold }`, checked field by field on load (`Sandbox.sanitize`) |
 
 A new save format gets a new key suffix (`.v2`) and a migration from the old one.

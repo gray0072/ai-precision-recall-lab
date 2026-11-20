@@ -57,6 +57,7 @@ Matrix: the model's answer in rows, the truth in columns; read the name backward
 - **Sandbox:** the play screen without money or goals, with knobs for the scenario, the base rate, the separation d′, calibration, prices, a review band and top-k mode; **Generate 1 000** fills the pile at once.
 - **Difficulty** (on the start screen and in every retry dialog, remembered): **Easy** — a slower belt, a better model, a faint hint of the true class, the cost-optimal line always shown, softer goals; **Medium** — the contracts as written; **Hard** — a faster belt, a weaker model, stricter goals, no warning before incidents.
 - **Language** EN · RU · SV and **Sound** On / Off on the start screen, both remembered. Metric names stay English in every language, with the local term next to them.
+- **Cloud save** (optional): **Sign in with Google** on the start screen and the campaign — money, upgrades, stars and bests — syncs between your devices; the settings stay on each device. Without signing in everything stays in the browser.
 
 <p align="center"><img src="screenshot.png" alt="A contract in play: the belt with letters, the threshold line, the pile, the confusion matrix and the metric bars" width="800"></p>
 
@@ -68,7 +69,7 @@ Development (Node 20+): `node --test tests/*.test.js` runs the tests of the simu
 
 ## Tech notes
 
-- Vanilla JavaScript, Canvas 2D and Web Audio; plain scripts, no framework, no bundler, no third-party code ([ADR-0001](docs/adr/0001-static-vanilla-js.md)); charts drawn by hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); every sound synthesized.
+- Vanilla JavaScript, Canvas 2D and Web Audio; plain scripts, no framework, no bundler, no third-party code ([ADR-0001](docs/adr/0001-static-vanilla-js.md)) except the optional cloud save's vendored supabase-js ([ADR-0007](docs/adr/0007-cloud-save-supabase.md)); charts drawn by hand ([ADR-0003](docs/adr/0003-hand-drawn-canvas-charts.md)); every sound synthesized.
 - A deterministic simulation (`sim/`) with seeded random streams, separated from drawing and sound by an event bus; the same code runs headless in the tests and the balance check.
 - An installable PWA on GitHub Pages; a new deploy is picked up only on the start screen or the map, never mid-contract.
 - Built with AI coding agents, iteration by iteration: the [spec](docs/spec/00-overview.md), the [roadmap](docs/plan/roadmap.md), the [architecture decisions](docs/adr/README.md) and the [prompt history](docs/prompts/README.md) are all in `docs/`.

@@ -1,6 +1,6 @@
 # 00 — Overview
 
-**AI Precision Recall Lab** is a browser game and an interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, and how base rates, drift and adversaries break a threshold that looked fine yesterday. It is a static site on GitHub Pages: no backend, no build step, installable as a PWA, playable on a phone.
+**AI Precision Recall Lab** is a browser game and an interactive demo that teaches the metrics of binary classification: the confusion matrix, precision, recall, F1, specificity, ROC and PR curves, calibration, cost-sensitive thresholds, and how base rates, drift and adversaries break a threshold that looked fine yesterday. It is a static site on GitHub Pages: no backend of its own (an optional cloud save goes through Supabase), no build step, installable as a PWA, playable on a phone.
 
 The repo name is `ai-precision-recall-lab`; the live URL will be `https://gray0072.github.io/ai-precision-recall-lab/`.
 
@@ -52,7 +52,7 @@ You run **Cutoff & Co.**, a tiny AI start-up that sells classifiers to clients: 
 
 ## Out of scope
 
-- Any backend, accounts, cloud saves or analytics.
+- Any backend of our own, or analytics. (Accounts exist only for the optional cloud save, added after the release at the owner's request: a Google sign-in through the shared Supabase project of the `ivan` games, 01 §15.1, [ADR-0007](../adr/0007-cloud-save-supabase.md).)
 - Real ML training in the MVP (scores are synthetic and controlled, see [ADR-0002](../adr/0002-synthetic-binormal-scores.md)).
 - Third-party chart or UI libraries ([ADR-0003](../adr/0003-hand-drawn-canvas-charts.md)).
 

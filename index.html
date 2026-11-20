@@ -20,7 +20,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <meta name="theme-color" content="#0d1b2a">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -114,6 +114,7 @@
       <button class="btn toggle" data-sound="on" data-i18n>On</button>
       <button class="btn toggle" data-sound="off" data-i18n>Off</button>
     </div>
+    <div class="account" id="accountRow" hidden></div>
     <div class="btnRow">
       <button class="btn secondary" id="helpToggle" aria-expanded="false" aria-controls="help" data-i18n>How to play</button>
     </div>
@@ -242,6 +243,7 @@
 
 <canvas id="fx" aria-hidden="true"></canvas>
 
+<script src="lib/supabase.min.js?v=1"></script>
 <script src="constants.js?v=6"></script>
 <script src="data/icons.js?v=5"></script>
 <script src="data/scenarios.js?v=2"></script>
@@ -250,8 +252,8 @@
 <script src="data/glossary.js?v=2"></script>
 <script src="data/quiz.js?v=1"></script>
 <script src="data/coach.js?v=3"></script>
-<script src="data/lang-ru.js?v=1"></script>
-<script src="data/lang-sv.js?v=1"></script>
+<script src="data/lang-ru.js?v=2"></script>
+<script src="data/lang-sv.js?v=2"></script>
 <script src="core/utils.js?v=1"></script>
 <script src="core/rng.js?v=1"></script>
 <script src="core/events.js?v=1"></script>
@@ -262,6 +264,7 @@
 <script src="core/cursor.js?v=1"></script>
 <script src="core/icons.js?v=1"></script>
 <script src="core/update.js?v=1"></script>
+<script src="core/cloud.js?v=1"></script>
 <script src="sim/state.js?v=5"></script>
 <script src="sim/model.js?v=2"></script>
 <script src="sim/stream.js?v=5"></script>
@@ -272,14 +275,14 @@
 <script src="sim/topk.js?v=1"></script>
 <script src="sim/sandbox.js?v=3"></script>
 <script src="sim/demo.js?v=1"></script>
-<script src="campaign.js?v=2"></script>
+<script src="campaign.js?v=3"></script>
 <script src="art/palette.js?v=1"></script>
 <script src="art/items.js?v=1"></script>
 <script src="art/clients.js?v=1"></script>
 <script src="render/render.js?v=4"></script>
 <script src="render/belt.js?v=3"></script>
 <script src="render/pile.js?v=2"></script>
-<script src="ui/screens.js?v=5"></script>
+<script src="ui/screens.js?v=6"></script>
 <script src="ui/hud.js?v=4"></script>
 <script src="ui/livepanel.js?v=3"></script>
 <script src="ui/charts.js?v=4"></script>
@@ -293,6 +296,6 @@
 <script src="ui/fireworks.js?v=1"></script>
 <script src="ui/endcard.js?v=2"></script>
 <script src="ui/sounds.js?v=1"></script>
-<script src="game.js?v=6"></script>
+<script src="game.js?v=7"></script>
 </body>
 </html>

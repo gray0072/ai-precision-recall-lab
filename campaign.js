@@ -10,6 +10,8 @@
 // bonus once per contract. A cheated run pays only its own money and never updates stars or bests.
 // Persistence goes through a storage object given to init() ({ load() → object | null, save(object),
 // remove() }; game.js passes prLab.campaign.v1 in localStorage), so this file runs headless in the tests.
+// The cloud copy (01 §15.1, core/cloud.js): every save is stamped with its time and calls onSave; snapshot()
+// is what travels, merge(remote) folds another device's copy into this one.
 // No drawing, no DOM, no sound.
 // ============================================================
 
@@ -17,9 +19,12 @@ const Campaign = (() => {
   let storage = { load: () => null, save: () => {}, remove: () => {} };
   let data = defaults();
   let exists = false;
+  let onSave = null;   // core/cloud.js: the campaign changed, send it a little later; headless, nobody listens
 
+  // updatedAt: the last save (ms, the cloud merge's "later copy"); epoch: when New campaign erased an older
+  // campaign (ms; 0 for a first campaign), so an erased campaign never comes back from another device
   function defaults() {
-    return { money: 0, upgrades: [], contracts: {}, quiz: {}, coach: [], lent: [], opened: [], cheated: false };
+    return { money: 0, upgrades: [], contracts: {}, quiz: {}, coach: [], lent: [], opened: [], cheated: false, updatedAt: 0, epoch: 0 };
   }
 
   const isNum = (v) => typeof v === 'number' && isFinite(v);
@@ -35,6 +40,8 @@ const Campaign = (() => {
     d.lent = ids(raw.lent);
     d.opened = ids(raw.opened, (id) => !!CONTRACTS[id]);
     d.cheated = raw.cheated === true;
+    d.updatedAt = isNum(raw.updatedAt) && raw.updatedAt > 0 ? raw.updatedAt : 0;
+    d.epoch = isNum(raw.epoch) && raw.epoch > 0 ? raw.epoch : 0;
     if (raw.quiz && typeof raw.quiz === 'object') for (const id in raw.quiz) if (CONTRACTS[id] && raw.quiz[id] === true) d.quiz[id] = true;
     if (raw.contracts && typeof raw.contracts === 'object') {
       for (const id in raw.contracts) {
@@ -57,13 +64,59 @@ const Campaign = (() => {
     exists = raw !== null && raw !== undefined;
     data = sanitize(raw);
   }
-  function save() { exists = true; storage.save(JSON.parse(JSON.stringify(data))); }
+  function write() { exists = true; storage.save(JSON.parse(JSON.stringify(data))); }
+  function save() {
+    data.updatedAt = Math.max(Date.now(), data.updatedAt + 1);
+    write();
+    if (onSave) onSave();
+  }
 
-  // New campaign: a fresh save (only the campaign key; the settings stay)
+  // New campaign: a fresh save (only the campaign key; the settings stay). Erasing a campaign that existed
+  // starts a new epoch, which wins over the older campaign on every device the cloud syncs.
   function reset() {
+    const erased = exists;
     storage.remove();
     data = defaults();
+    if (erased) data.epoch = Date.now();
     save();
+  }
+
+  // ---------- the cloud copy (01 §15.1) ----------
+  function snapshot() { return JSON.parse(JSON.stringify(data)); }
+  // Another device's copy folded into this one; returns whether anything changed. A campaign of a later
+  // epoch replaces this one whole (New campaign there erased it); within one epoch what only grows is kept
+  // from both — the stars (the more) and bests (the higher) per contract and level, the quiz bonuses paid,
+  // the coach marks seen, the contracts opened, the cheated flag — while the balance and the upgrades,
+  // which pay for each other, come together from the copy saved last. Merging the same copy again changes
+  // nothing.
+  function merge(remote) {
+    if (!remote || typeof remote !== 'object') return false;
+    const r = sanitize(remote);
+    const before = JSON.stringify(data);
+    if (r.epoch !== data.epoch) {
+      if (r.epoch > data.epoch) data = r;
+    } else {
+      for (const id in r.contracts) {
+        for (const lvl in r.contracts[id]) {
+          const theirs = r.contracts[id][lvl];
+          const mine = (data.contracts[id] = data.contracts[id] || {})[lvl];
+          if (!mine) { data.contracts[id][lvl] = { stars: theirs.stars, best: theirs.best }; continue; }
+          mine.stars = Math.max(mine.stars, theirs.stars);
+          if (theirs.best !== null && (mine.best === null || theirs.best > mine.best)) mine.best = theirs.best;
+        }
+      }
+      for (const id in r.quiz) data.quiz[id] = true;
+      for (const k of ['coach', 'lent', 'opened']) for (const id of r[k]) if (!data[k].includes(id)) data[k].push(id);
+      data.cheated = data.cheated || r.cheated;
+      if (r.updatedAt > data.updatedAt) {
+        data.money = r.money;
+        data.upgrades = r.upgrades.slice();
+        data.updatedAt = r.updatedAt;
+      }
+    }
+    if (JSON.stringify(data) === before) return false;
+    write();
+    return true;
   }
 
   // ---------- reading ----------
@@ -162,10 +215,10 @@ const Campaign = (() => {
   function markCheated() { data.cheated = true; save(); }
 
   return {
-    defaults, sanitize, init, save, reset, record, bestStars, played, unlocked, nextOpen, totalStars, finish,
+    defaults, sanitize, init, save, reset, snapshot, merge, record, bestStars, played, unlocked, nextOpen, totalStars, finish,
     labOpen, owns, upgradeState, buy, buyAll, upgrades,
     coachSeen, markCoach, addMoney, open, markCheated,
     get exists() { return exists; }, get money() { return data.money; }, get cheated() { return data.cheated; },
-    get data() { return data; }
+    get data() { return data; }, set onSave(fn) { onSave = fn; }
   };
 })();

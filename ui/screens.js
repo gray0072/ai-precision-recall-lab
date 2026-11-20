@@ -4,11 +4,12 @@
 // AI Precision Recall Lab — the overlay screens (spec 04 §3): showing and hiding the panels of #overlay,
 // moving the focus between a panel's buttons with the arrow keys and pressing its default button with
 // Space / Enter (from fish-frenzy's core/input.js), the short banner, and the start screen (title,
-// Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, How to play), the pause
+// Continue / New campaign, Sandbox, Cheat sheet, the difficulty and sound rows, the cloud save's account
+// row, How to play), the pause
 // dialog (01 §12), a confirmation dialog (New campaign) and a placeholder panel for what comes later.
 // The map, the briefing, the results, the Lab, the cheat sheet and the end card have files of their own; their
 // panels are listed here.
-// Reads State and Campaign; game.js wires the buttons to the flow.
+// Reads State, Campaign and Cloud; game.js wires the buttons to the flow.
 // ============================================================
 
 const Screens = (() => {
@@ -110,7 +111,71 @@ const Screens = (() => {
     });
     $('difficultyNote').textContent = DIFFICULTY_NOTES[State.difficulty]();
     renderSound('#soundRow');
+    renderAccount();
   }
+
+  // ---------- the cloud save (core/cloud.js, 01 §15.1): Sign in with Google, or the sync's state and Sign out ----------
+  const GOOGLE_G = [['#EA4335', 'M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z'],
+    ['#4285F4', 'M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.5 5.8c4.4-4 6.8-10 6.8-17.3z'],
+    ['#FBBC05', 'M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6.1z'],
+    ['#34A853', 'M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.2 0-11.5-4.1-13.4-9.8l-7.9 6.1C6.6 42.6 14.6 48 24 48z']];
+  // Google's "G", drawn as SVG on the sign-in button (the brand's own mark, not a font sign)
+  function googleG() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'gLogo');
+    svg.setAttribute('viewBox', '0 0 48 48');
+    svg.setAttribute('aria-hidden', 'true');
+    for (const [fill, d] of GOOGLE_G) {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('fill', fill);
+      p.setAttribute('d', d);
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+  function node(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+  function renderAccount() {
+    const row = $('accountRow'), st = Cloud.status;
+    row.hidden = st === 'unavailable';
+    if (row.hidden) return;
+    const keep = row.contains(document.activeElement) ? document.activeElement.dataset.cloud : null;
+    row.textContent = '';
+    const signIn = () => {
+      const b = node('button', 'btn small cloudIn');
+      b.dataset.cloud = 'in';
+      b.append(googleG(), tr('Sign in with Google'));
+      return b;
+    };
+    if (st === 'off') {
+      row.append(signIn(), node('p', 'fine', tr('Keep the campaign in the cloud and play it on any device: money, upgrades, stars and bests.')));
+    } else {
+      const text = { syncing: tr('Syncing…'), synced: tr('Synced'), error: tr('Sync failed — it tries again later'),
+        signedOut: tr('Signed out — sign in again to sync') }[st];
+      row.append(node('span', 'cloudState ' + st, text));
+      if (st === 'signedOut') row.append(signIn());
+      else {
+        const b = node('button', 'btn small secondary', tr('Sign out'));
+        b.dataset.cloud = 'out';
+        row.append(b);
+      }
+      if (Cloud.email) row.append(node('p', 'fine', Cloud.email));
+    }
+    // a redraw while a button of the row had the focus (keyboard) keeps it on the same button
+    const again = keep && row.querySelector('[data-cloud="' + keep + '"]');
+    if (again) again.focus();
+  }
+  $('accountRow').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cloud]');
+    if (!b) return;
+    if (b.dataset.cloud === 'in') Cloud.signIn();
+    else { Cloud.signOut(); renderAccount(); }
+  });
 
   function renderSound(row) {
     document.querySelectorAll(row + ' [data-sound]').forEach((b) => {
@@ -172,7 +237,7 @@ const Screens = (() => {
   }
 
   return {
-    show, hide, visiblePanel, banner, showStart, renderStart, renderSound, renderDifficulty, toggleHelp, showPause,
+    show, hide, visiblePanel, banner, showStart, renderStart, renderAccount, renderSound, renderDifficulty, toggleHelp, showPause,
     showPlaceholder, confirm, get shown() { return shownName; }
   };
 })();

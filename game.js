@@ -11,7 +11,8 @@
 // the same controls set k (sim/topk.js: the handle's line value ↔ k, one key step = one document). The attract
 // demo (01 §9, sim/demo.js) runs behind the start screen: dimmed, no input, not with prefers-reduced-motion,
 // paused while the page is hidden or the start panel is scrolled on a phone. A won C12 leads from its results
-// to the end card (ui/endcard.js). The debug cheats of 01 §14 are here too. Loaded last.
+// to the end card (ui/endcard.js). The debug cheats of 01 §14 are here too. The cloud save (core/cloud.js)
+// starts here, after the campaign is loaded. Loaded last.
 // ============================================================
 
 const Game = (() => {
@@ -101,7 +102,9 @@ const Game = (() => {
   function newCampaign() {
     gesture();
     if (!Campaign.exists) { Campaign.reset(); go('map'); return; }
-    Screens.confirm(tr('New campaign?'), tr('This erases the campaign: money, stars and bests. The settings stay.'),
+    Screens.confirm(tr('New campaign?'), Cloud.ready()
+      ? tr('This erases the campaign: money, stars and bests, here and in the cloud. The settings stay.')
+      : tr('This erases the campaign: money, stars and bests. The settings stay.'),
       tr('Erase and start'), () => { Campaign.reset(); go('map'); }, () => go('start'));
   }
 
@@ -346,6 +349,16 @@ const Game = (() => {
       save: (data) => Store.setJSON('campaign.v1', data),
       remove: () => Store.remove('campaign.v1')
     });
+    // the cloud save (core/cloud.js, 01 §15.1): the account row follows the sync; a campaign changed by
+    // another device's copy redraws the screen that shows it (the start screen, the map, the Lab)
+    Cloud.onChange = (campaignChanged) => {
+      const shown = Screens.shown;
+      if (!campaignChanged) { if (shown === 'start') Screens.renderAccount(); return; }
+      if (shown === 'start') Screens.renderStart();
+      else if (shown === 'map') { const top = $('overlay').scrollTop; MapScreen.show(briefing); $('overlay').scrollTop = top; }
+      else if (shown === 'lab') Lab.show();
+    };
+    Cloud.init();
 
     // the start screen
     $('continueBtn').addEventListener('click', () => { gesture(); go('map'); });
